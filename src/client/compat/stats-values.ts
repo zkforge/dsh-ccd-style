@@ -1,27 +1,20 @@
 import type { Disposer } from '../contracts/ports.ts';
 import { HOST } from './host-dom.ts';
 
-/** Custom property carrying one pill's short readout. */
+/** Short readout mirrored from native text for wide columns only. */
 export const STAT_VALUE_PROPERTY = '--ccd-stat-value';
 
 /** Custom property carrying the width of the Composer's trailing control group. */
 export const TRAILING_WIDTH_PROPERTY = '--ccd-trailing-width';
 
-/** Segment separator the pill labels are built with. */
-const SEGMENT = '·';
+/** Remaining model-button space after leading controls, statistics and gaps. */
+export const MODEL_MAX_WIDTH_PROPERTY = '--ccd-model-max-width';
 
 /**
- * Two facts about the Composer's own readouts that a stylesheet cannot work out:
- *
- * 1. `ui-chat`'s pills render every fact they know as one sentence
- *    (`6 轮 498 步 · 210 tok/s`, `117M tok · 缓存命中 95%`). The reference keeps
- *    one number per icon, so the wanted segment is read from the rendered text —
- *    the rate when the label carries one, the leading count otherwise — and
- *    published as a custom property. The label node itself is never touched, so
- *    React keeps owning its text; the stylesheet only prints the property.
- * 2. The statistics cluster has to sit *before* the model selector, and the dock
- *    is a sibling of the card rather than a row child, so its offset needs the
- *    trailing group's live width. That width is measured, not assumed.
+ * The responsive statistics cluster sits before the model selector. Its dock is
+ * a sibling of the card rather than a row child, so its wide-layout offset needs
+ * the trailing group's live width. Readouts and their detail dialogs stay owned
+ * by the host; wide columns mirror one short segment without changing the host label.
  *
  * @param document - renderer document carrying the Composer.
  * @param report - sink for observer failures; the native readouts stay.
@@ -32,17 +25,18 @@ export function mountComposerStats(document: Document, report: (error: unknown) 
   let trailing: HTMLElement | null = null;
   let root: HTMLElement | null = null;
 
-  /** One icon, one number: the rate if the label has one, else the leading count. */
-  const shorten = (text: string): string => {
-    const parts = text.split(SEGMENT).map(part => part.trim()).filter(part => part !== '');
-    const [first] = parts;
-    if (first === undefined) return '';
-    if (parts.length === 1) return first;
-    return parts.find(part => part.includes('/')) ?? first;
-  };
-
   const sync = () => {
     scheduled = 0;
+    for (const pill of document.querySelectorAll<HTMLElement>(HOST.statsPill)) {
+      const parts = (pill.querySelector(HOST.statsLabel)?.textContent ?? '')
+        .split('·').map(part => part.trim()).filter(Boolean);
+      const value = parts.find(part => part.includes('/')) ?? parts[0] ?? '';
+      const quoted = value === '' ? '' : JSON.stringify(value);
+      if (pill.style.getPropertyValue(STAT_VALUE_PROPERTY) !== quoted) {
+        if (quoted === '') pill.style.removeProperty(STAT_VALUE_PROPERTY);
+        else pill.style.setProperty(STAT_VALUE_PROPERTY, quoted);
+      }
+    }
     /* The last measurement is kept across element swaps: the Composer is rebuilt
        when the page changes phase, and clearing the property there would drop the
        statistics cluster back onto the model selector for a frame. */
@@ -51,13 +45,28 @@ export function mountComposerStats(document: Document, report: (error: unknown) 
     const nextTrailing = document.querySelector<HTMLElement>(`${HOST.composerRow} ${HOST.composerTrailing}`);
     if (nextTrailing !== null) trailing = nextTrailing;
     if (root !== null && trailing !== null && trailing.isConnected) {
-      root.style.setProperty(TRAILING_WIDTH_PROPERTY, `${Math.round(trailing.getBoundingClientRect().width)}px`);
-    }
-    for (const pill of document.querySelectorAll<HTMLElement>(HOST.statsPill)) {
-      const label = pill.querySelector<HTMLElement>(HOST.statsLabel);
-      const value = label === null ? '' : shorten(label.textContent ?? '');
-      if (value === '') pill.style.removeProperty(STAT_VALUE_PROPERTY);
-      else pill.style.setProperty(STAT_VALUE_PROPERTY, JSON.stringify(value));
+      const width = `${Math.round(trailing.getBoundingClientRect().width)}px`;
+      if (root.style.getPropertyValue(TRAILING_WIDTH_PROPERTY) !== width) {
+        root.style.setProperty(TRAILING_WIDTH_PROPERTY, width);
+      }
+      const row = document.querySelector<HTMLElement>(HOST.composerRow);
+      const dock = root.querySelector<HTMLElement>(HOST.composerDock);
+      const model = trailing.querySelector<HTMLElement>(HOST.modelSelectTrigger);
+      if (row !== null && dock !== null && model !== null) {
+        const style = getComputedStyle(row);
+        const available = row.getBoundingClientRect().width - parseFloat(style.paddingLeft) - parseFloat(style.paddingRight);
+        const leading = Array.from(row.children).filter(child => child !== trailing)
+          .map(child => child.getBoundingClientRect().width).filter(width => width > 0);
+        const extras = Math.max(0, trailing.getBoundingClientRect().width - model.getBoundingClientRect().width);
+        const dockWidth = dock.getBoundingClientRect().width;
+        const dockGap = dockWidth > 0 ? parseFloat(getComputedStyle(root).getPropertyValue('--ccd-dock-gap')) : 0;
+        const room = Math.max(0, Math.floor(available - leading.reduce((sum, width) => sum + width, 0)
+          - leading.length * parseFloat(style.columnGap) - extras - dockWidth - dockGap));
+        const maxWidth = `${room}px`;
+        if (root.style.getPropertyValue(MODEL_MAX_WIDTH_PROPERTY) !== maxWidth) {
+          root.style.setProperty(MODEL_MAX_WIDTH_PROPERTY, maxWidth);
+        }
+      }
     }
   };
 
@@ -76,11 +85,18 @@ export function mountComposerStats(document: Document, report: (error: unknown) 
   let observer: MutationObserver | undefined;
   try {
     observer = new MutationObserver(schedule);
-    observer.observe(document.body, { childList: true, subtree: true, characterData: true });
+    /* Dragging a panel changes the frame's inline grid tracks, not the window
+       size. Native model collapse can also change after a layout pass. Watch
+       both; guarded property writes prevent our own styles feeding a loop. */
+    observer.observe(document.body, {
+      childList: true, subtree: true, characterData: true, attributes: true,
+      attributeFilter: ['style', 'class', 'data-model-compact'],
+    });
     window.addEventListener('resize', schedule);
     sync();
   } catch (error) {
     observer?.disconnect();
+    window.removeEventListener('resize', schedule);
     report(error);
     return () => {};
   }
@@ -90,6 +106,7 @@ export function mountComposerStats(document: Document, report: (error: unknown) 
     observer?.disconnect();
     window.removeEventListener('resize', schedule);
     root?.style.removeProperty(TRAILING_WIDTH_PROPERTY);
+    root?.style.removeProperty(MODEL_MAX_WIDTH_PROPERTY);
     for (const pill of document.querySelectorAll<HTMLElement>(HOST.statsPill)) {
       pill.style.removeProperty(STAT_VALUE_PROPERTY);
     }

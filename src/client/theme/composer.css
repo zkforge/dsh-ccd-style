@@ -10,7 +10,7 @@
  * Reference geometry (@2x reference screenshots, logical px at 1374x871):
  * - input surface: 770x42, 1px border, radius 10, text line 24px at 8/14 padding
  * - the send control is the return arrow *inside* that surface, 24px, 14px in
- *   from the right border and on the first text line
+ *   from the right border and anchored to the bottom text line
  * - control row: outside the surface, 4px below it, ~28px tall
  * - window edge: 8px below the row
  *
@@ -32,6 +32,13 @@ html[data-dsh-ccd-style="true"] .yhfFVG_card {
   box-shadow: none;
 }
 
+/* Without a workspace the host makes the whole card a workspace picker and
+   draws a dashed ::after around it. Move that state cue to the input surface
+   that owns our border, while keeping the host's picker behavior. */
+html[data-dsh-ccd-style="true"] .yhfFVG_cardWorkspaceTrigger::after {
+  content: none;
+}
+
 html[data-dsh-ccd-style="true"] .yhfFVG_scroll {
   box-sizing: border-box;
   min-height: var(--ccd-composer-min-height);
@@ -43,11 +50,48 @@ html[data-dsh-ccd-style="true"] .yhfFVG_scroll {
   box-shadow: var(--ccd-shadow-card);
 }
 
+html[data-dsh-ccd-style="true"] .yhfFVG_cardWorkspaceTrigger .yhfFVG_scroll {
+  border-style: dashed;
+}
+
+/* Attachments: the `ui-attachment` plugin renders the draft-image rail as a
+   sibling of the input panel inside the card (`conversation.input.attachments`
+   slot, class pinned in src/client/compat/host-dom.ts — ComposerAttachments
+   .module.css, `dVdiKa_`). With the card transparent the previews would float
+   on the page above the surface, and the send control, pinned to the card's
+   top-right corner, would leave the surface with them. When the rail is
+   present the two merge back into one surface: the rail draws the top cap and
+   the panel drops its own, while the card's zero gap keeps the 1px side
+   borders touching so no seam shows. The host's unstyled card pulled the rail
+   6px into the panel (`margin-bottom: -6px`); that belongs to the old card and
+   is dropped. The send control stays beside the bottom text line, so the rail
+   needs only the same side padding as the input. */
+html[data-dsh-ccd-style="true"] .yhfFVG_card:has(.dVdiKa_rail) .dVdiKa_rail {
+  box-sizing: border-box;
+  margin-bottom: 0;
+  padding: 10px var(--ccd-composer-padding-inline) 0;
+  border: 1px solid var(--ccd-border-strong);
+  border-bottom: 0;
+  border-radius: var(--ccd-composer-radius) var(--ccd-composer-radius) 0 0;
+  background: var(--ccd-card);
+  box-shadow: var(--ccd-shadow-card);
+}
+
+html[data-dsh-ccd-style="true"] .yhfFVG_card:has(.dVdiKa_rail) .yhfFVG_scroll {
+  border-top: 0;
+  border-radius: 0 0 var(--ccd-composer-radius) var(--ccd-composer-radius);
+}
+
+/* Match the image tile to the outer editable surface, including its clipping. */
+html[data-dsh-ccd-style="true"] .yhfFVG_card .dVdiKa_thumbnail {
+  border-radius: var(--ccd-composer-radius);
+}
+
 html[data-dsh-ccd-style="true"] .yhfFVG_input,
 html[data-dsh-ccd-style="true"] .yhfFVG_hero .yhfFVG_input {
   box-sizing: border-box;
   min-height: 24px;
-  /* Room for the send control on the first line. */
+  /* Keep text clear of the controls, including when the editor scrolls. */
   padding: 0 var(--ccd-send-reserve) 0 0;
   font-family: var(--ccd-font-ui);
   font-size: var(--dsh-content-font-size, 14px);
@@ -56,22 +100,29 @@ html[data-dsh-ccd-style="true"] .yhfFVG_hero .yhfFVG_input {
 }
 
 html[data-dsh-ccd-style="true"] .yhfFVG_placeholder {
-  inset: 0 auto auto 0;
+  /* Hero copy is longer than chat copy. Limit only the placeholder, leaving
+     the actual editor's wrapping and multiline growth untouched. */
+  inset: 0 0 auto 0;
+  box-sizing: border-box;
   padding-right: var(--ccd-send-reserve);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
   color: var(--ccd-text-placeholder);
   font-size: var(--dsh-content-font-size, 14px);
   line-height: 24px;
 }
 
-/* Send / stop: a bare return glyph on the input surface's first line. The host
-   swaps the glyph for a filled square while generating; that one keeps its
-   shape and only loses the button chrome. */
+/* Send / stop stay beside the input's bottom line. The row is their containing
+   block: its top follows the input's bottom even if the row itself wraps.
+   The host still owns both buttons, their state, labels and click handlers. */
 html[data-dsh-ccd-style="true"] .yhfFVG_primary {
   /* The user agent's `1px 6px` button padding is asymmetric against a 24px box
      only in the sense that it steals the content box; drop it and centre. */
   padding: 0;
   position: absolute;
-  top: var(--ccd-composer-padding-block);
+  top: auto;
+  bottom: calc(100% + var(--ccd-composer-row-gap) + var(--ccd-composer-padding-block) + 1px);
   right: var(--ccd-composer-padding-inline);
   width: var(--ccd-send-size);
   height: var(--ccd-send-size);
@@ -92,25 +143,34 @@ html[data-dsh-ccd-style="true"] .yhfFVG_primary:disabled {
   opacity: 0.4;
 }
 
-html[data-dsh-ccd-style="true"] .yhfFVG_primary:not(:has(rect)) svg {
+html[data-dsh-ccd-style="true"] .yhfFVG_primary svg {
   display: none;
 }
 
-html[data-dsh-ccd-style="true"] .yhfFVG_primary:not(:has(rect))::before {
+html[data-dsh-ccd-style="true"] .yhfFVG_primary::before {
   content: "";
   width: 16px;
   height: 16px;
   background-color: currentColor;
-  mask: var(--ccd-icon-return) center / 16px 16px no-repeat;
+  mask: var(--ccd-icon-send) center / 16px 16px no-repeat;
+}
+
+html[data-dsh-ccd-style="true"] .yhfFVG_primary:has(rect)::before {
+  mask-image: var(--ccd-icon-stop);
+}
+
+/* DSH exposes both stop and send when a new draft is entered while running. */
+html[data-dsh-ccd-style="true"] .yhfFVG_row .yhfFVG_primary:has(+ .yhfFVG_primary) {
+  right: calc(var(--ccd-composer-padding-inline) + var(--ccd-send-size) + 6px);
+}
+
+html[data-dsh-ccd-style="true"] .yhfFVG_card:has(.yhfFVG_primary + .yhfFVG_primary) .yhfFVG_input {
+  padding-right: calc(var(--ccd-send-reserve) + var(--ccd-send-size) + 6px);
 }
 
 /* Tool row: outside the surface, directly below it. */
 html[data-dsh-ccd-style="true"] .yhfFVG_row {
-  /* The host makes this row an inline-size container, which also makes it the
-     containing block for absolutely positioned descendants. The send control is
-     moved onto the input surface, whose top this row cannot see, so the
-     containment is dropped here and the card keeps that job. */
-  container-type: normal;
+  position: relative;
   min-height: var(--ccd-control-row-height);
   margin-top: var(--ccd-composer-row-gap);
   padding: 0 var(--ccd-composer-row-inset);
@@ -120,6 +180,29 @@ html[data-dsh-ccd-style="true"] .yhfFVG_row {
 
 html[data-dsh-ccd-style="true"] .yhfFVG_row button {
   color: var(--ccd-text-secondary);
+}
+
+/* The model selector's two texts — the model name and the reasoning effort —
+   are the row's chosen values, not chrome, so they are set bolder than the
+   row's other labels. The host draws the trigger itself at `font-weight: 400`,
+   and each text is its own span, so the weight lands on the spans rather than
+   on the button. Host classes are pinned in src/client/compat/host-dom.ts
+   (`ui-model-selection`'s ModelSelect.module.css, `cl2Rlq_`). */
+html[data-dsh-ccd-style="true"] .cl2Rlq_triggerLabel,
+html[data-dsh-ccd-style="true"] .cl2Rlq_triggerEffort {
+  font-weight: var(--ccd-font-weight-strong);
+}
+
+/* Budget the complete row: the native model-collapse check cannot see the
+   sibling statistics dock. Keep the effort readable and give the name the
+   remaining space, instead of hiding either at a fixed column breakpoint. */
+html[data-dsh-ccd-style="true"] .cl2Rlq_trigger {
+  box-sizing: border-box;
+  max-width: min(360px, var(--ccd-model-max-width, 45cqw));
+}
+
+html[data-dsh-ccd-style="true"] .cl2Rlq_triggerEffort {
+  flex-shrink: 0;
 }
 
 /* The command button is a bare glyph in the reference, not a filled circle. */
@@ -143,11 +226,12 @@ html[data-dsh-ccd-style="true"] .yhfFVG_tools {
 /* Statistics cluster: the dock is a sibling of the card inside the Composer root,
    so it is laid over the tool row's right end instead of taking a line of its
    own. Every readout keeps its own icon and its click-open detail panel; only
-   the always-on labels go. The root becomes the containing block, and the
+   the narrow-column labels go. The root becomes the containing block, and the
    offsets below walk back in from the column edge to the card's own right edge,
    which the dock cannot see from where it sits. */
 html[data-dsh-ccd-style="true"] .yhfFVG_root {
   position: relative;
+  container: ccd-composer / inline-size;
 }
 
 html[data-dsh-ccd-style="true"] .yhfFVG_dock {
@@ -181,8 +265,8 @@ html[data-dsh-ccd-style="true"] .y0jqnG_trigger {
   font-size: var(--ccd-font-size-muted);
 }
 
-/* One icon, one number: the sentence the host renders is replaced by the single
-   value the compat layer reads out of it (compat/stats-values.ts). */
+/* Wide columns show one short readout per icon, derived from host text.
+   Original aria-labels and click handlers stay on the host buttons. */
 html[data-dsh-ccd-style="true"] .OpZ85W_label,
 html[data-dsh-ccd-style="true"] .OpZ85W_sep {
   display: none;
@@ -193,9 +277,34 @@ html[data-dsh-ccd-style="true"] .OpZ85W_pill::after {
   font-variant-numeric: tabular-nums;
 }
 
+@container ccd-composer (max-width: 700px) {
+  html[data-dsh-ccd-style="true"] .OpZ85W_pill::after {
+    content: none;
+  }
+}
+
 /* The context ring keeps its percentage: that is already one number. */
 html[data-dsh-ccd-style="true"] .y0jqnG_trigger > span {
   font-variant-numeric: tabular-nums;
+}
+
+/* Narrow columns abbreviate the actionable permission control, retaining the
+   model's name and effort according to the measured space above. */
+@container ccd-composer (max-width: 560px) {
+  html[data-dsh-ccd-style="true"] .wXeviG_triggerLabel {
+    display: none;
+  }
+
+  html[data-dsh-ccd-style="true"] .OpZ85W_pill,
+  html[data-dsh-ccd-style="true"] .y0jqnG_trigger {
+    padding-inline: 4px;
+  }
+}
+
+html[data-dsh-ccd-style="true"] .OpZ85W_pill,
+html[data-dsh-ccd-style="true"] .y0jqnG_trigger {
+  flex-shrink: 0;
+  white-space: nowrap;
 }
 
 /* Hero keeps the workspace row above the composer, as the reference does. */
@@ -210,17 +319,40 @@ html[data-dsh-ccd-style="true"] .yhfFVG_hero {
   padding-bottom: var(--ccd-composer-bottom-gap);
 }
 
-/* The chips row lines up with the input surface below it: the Composer root
-   insets that surface by the side clearance, so the row carries the same inset
-   plus the reference's 4px. */
+/* The chips row starts on the input surface's own left edge: the Composer root
+   insets that surface by the side clearance, so the row carries exactly that
+   inset and nothing more. The reference measures the chip's border within 1px
+   of the input's border, so a chip that sat any further right would read as a
+   second, misaligned column. */
 html[data-dsh-ccd-style="true"] .ST7X_W_heroWorkspaceRow {
   justify-content: flex-start;
   height: 26px;
-  padding: 0 calc(var(--dsh-composer-side-clearance, 16px) + var(--ccd-composer-row-inset));
+  padding: 0 var(--dsh-composer-side-clearance, 16px);
 }
 
+/* Both chips in that row are menu controls — the workspace picker and the
+   agent-preset picker — and the reference draws each of them as a bordered
+   card on the page rather than as a bare label: 1px `--ccd-border`, the row
+   radius, a hairline shadow, and no fill until hover. The input surface below
+   keeps the stronger border, because it is the editable surface. */
+html[data-dsh-ccd-style="true"] .ST7X_W_heroWorkspaceRow button[aria-haspopup="menu"],
 html[data-dsh-ccd-style="true"] .bocITq_workspace {
+  box-sizing: border-box;
+  height: 26px;
   min-height: 26px;
+  padding: 0 8px;
+  border: 1px solid var(--ccd-border);
+  border-radius: var(--ccd-radius-row);
+  background: transparent;
+  box-shadow: var(--ccd-shadow-card);
   color: var(--ccd-text-secondary);
   font-size: var(--ccd-font-size-muted);
+}
+
+html[data-dsh-ccd-style="true"] .ST7X_W_heroWorkspaceRow button[aria-haspopup="menu"]:hover:not(:disabled),
+html[data-dsh-ccd-style="true"] .ST7X_W_heroWorkspaceRow button[aria-haspopup="menu"][aria-expanded="true"],
+html[data-dsh-ccd-style="true"] .bocITq_workspace:hover:not(:disabled),
+html[data-dsh-ccd-style="true"] .bocITq_workspace[aria-expanded="true"] {
+  background: var(--ccd-hover);
+  color: var(--ccd-text);
 }

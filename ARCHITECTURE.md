@@ -1,6 +1,6 @@
 # 项目架构
 
-更新日期：2026-10-01。本文件描述当前骨架事实；产品目标见 PLAN，验证状态见 [验证记录](docs/VERIFICATION.md)。
+更新日期：2026-10-02。本文件描述当前骨架事实；产品目标见 PLAN，验证状态见 [验证记录](docs/VERIFICATION.md)。
 
 插件消费 DSH 的配置、服务与界面插槽，输出可撤销的样式与展示组件。Workspace、Session、消息、输入编辑器与执行状态由 DSH 持有；本项目只拥有启用状态、设计变量、样式表、展示组件及其资源。四个界面 feature（shell、sidebar、new-session、conversation）已是 `implemented`；tool-calls 保留原生交互，statistics 因缺少真实全局用量接口保持关闭。
 
@@ -45,7 +45,7 @@ flowchart LR
 
 **架构约束：业务状态只有一个来源——DSH。** 插件不写 Session 日志，不扫描整段流式事件，也不建立第二套项目／会话状态。React 读取可变数据应使用 SDK 注入的标准 hooks；组件不能手工订阅或镜像宿主数据。
 
-**架构约束：资源必须可逆。** 注册返回值、监听器、样式、观察器、异步取消都通过 `scope.add()` 管理。改变原有内联样式或属性时必须记录并恢复：目前只有根属性 `data-dsh-ccd-style`、打开中的菜单上的 `data-ccd-account-menu` 标记与 `--ccd-account-name`（两者都只在菜单打开期间存在，关闭或释放时移除）、被翻转到锚点上方的菜单的 `data-ccd-menu-flipped` 标记，以及视图切换器轨道上的 `--ccd-view-x`／`--ccd-view-w`。DOM 不存在时保留原生 UI（样式表本身是惰性的，可以先行挂载）。
+**架构约束：资源必须可逆。** 注册返回值、监听器、样式、观察器、异步取消都通过 `scope.add()` 管理。改变原有内联样式或属性时必须记录并恢复：目前只有根属性 `data-dsh-ccd-style`、打开中的菜单上的 `data-ccd-account-menu` 标记与 `--ccd-account-name`（两者都只在菜单打开期间存在，关闭或释放时移除）、被翻转到锚点上方的菜单的 `data-ccd-menu-flipped` 标记与同一模块为它写入的内联 `max-height`（关闭或释放时恢复菜单自己的值），Composer 上的 `--ccd-trailing-width`／`--ccd-model-max-width`、统计按钮上的 `--ccd-stat-value`，新会话默认提示语的现有 Text 节点与对应输入区 aria-label（仅在仍等于本插件写入的值时恢复），以及视图切换器轨道上的 `--ccd-view-x`／`--ccd-view-w`／`--ccd-view-duration`。DOM 不存在时保留原生 UI（样式表本身是惰性的，可以先行挂载）。
 
 **架构约束：不夺取宿主的所有权。** `sidebar`、`main.conversation` 等位置由官方组件独占并声明其子插槽；替换它们会让官方子位置一并消失。因此本项目只做加性注册与插件作用域样式，不复制官方 Composer、侧栏或会话壳。唯一需要读取宿主动态几何的地方是框架列宽（见下）。
 
@@ -55,7 +55,7 @@ DSH 用 CSS Modules，类名带构建哈希。所有宿主类名集中在 `src/c
 
 框架的三列宽度由 `ui-layout` 在 JavaScript 中求解并写成内联 `grid-template-columns`，样式表无法单独改写侧栏轨道。插件因此**不写任何轨道值**：侧栏宽度始终是 DSH 自己的偏好，分隔线画在侧栏自己的右边缘，拖动时线与指针同步移动（见 [DSH 兼容说明](docs/DSH_COMPATIBILITY.md)）。
 
-Composer 底部的两个位置需要读宿主动态结构：账号菜单的标记与名称镜像（`compat/account-menu.ts`），以及贴着窗口底边的菜单翻转（`compat/composer-menus.ts`）。会话顶栏的视图切换器需要读第三个量：选中段相对轨道的偏移与宽度（`compat/view-switch.ts`），因为滑块要落在宿主自己的按钮上。三者都只用 MutationObserver 观察，不持有宿主节点，释放时清除全部标记与属性。
+Composer 底部的两个位置需要读宿主动态结构：账号菜单的标记与名称镜像（`compat/account-menu.ts`），以及贴着窗口底边的菜单翻转（`compat/composer-menus.ts`；新建页芯片行的工作区选择器与 Agent 预设菜单同样从这个底边位置弹出，卡片高于锚点上方空间时才连同高度上限一起改，卡片离开固定的菜单表面时撤掉）。会话顶栏的视图切换器需要读第三个量：选中段相对轨道的偏移与宽度（`compat/view-switch.ts`），因为滑块要落在宿主自己的按钮上；框架 style 变化即时校正布局，选择变化才执行滑动动画。统计簇偏移还读取原生 Composer trailing 组的实际宽度（`compat/stats-values.ts`），观察框架轨道 style 与模型收缩属性变化，确保拖动右栏时同步，并按控制行剩余空间发布模型按钮宽度上限以保留推理等级；速率与 token 的简短读数从宿主标签镜像，宽列显示、窄列省略，原生文本和详情按钮仍由宿主持有。新会话默认提示语通过 `compat/composer-placeholder.ts` 对固定版本已知 hero 文案做小范围展示适配，改现有 Text 节点及对应 aria-label，不替换编辑器、不改草稿；宿主工作区／阻断提示优先，释放时条件恢复。这些适配都只用 MutationObserver 观察（菜单翻转另加 `resize`；`ResizeObserver` 的投递同样依赖渲染步骤，被遮挡时不来，所以不用它做失效信号），仅在清理作用域内持有当前量测／修改节点，释放时清除引用并恢复全部标记、属性及仍属于本插件的文案。
 
 ## 构建与分发
 

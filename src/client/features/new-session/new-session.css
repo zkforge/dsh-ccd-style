@@ -1,9 +1,10 @@
 /*
- * Blank-session page: the reference greets from the top of the column and
- * keeps the Composer at the bottom edge, with the workspace row directly above
- * it. DSH's hero centres one block, so the greeting is lifted out of that block
- * and the block itself is pushed to the bottom — the Composer element, its
- * editor and every control stay exactly where the host renders them.
+ * Blank-session page: the reference keeps the Composer at the bottom edge with
+ * the workspace row directly above it, and DSH renders the greeting, that row
+ * and the input bar as one block inside the Composer seat. This module moves
+ * the block to the bottom and lifts the greeting out of it into the middle of
+ * the page — the Composer element, its editor and every control stay exactly
+ * where the host renders them.
  *
  * Host classes are pinned in src/client/compat/host-dom.ts.
  */
@@ -15,31 +16,20 @@ html[data-dsh-ccd-style="true"] .ST7X_W_root[data-phase="hero"] .ST7X_W_composer
   margin-top: auto;
 }
 
-/* Greeting: top of the content column, left aligned on the composer column. */
+/* Greeting: the host's own centred block, taken out of the Composer group and
+   put in the middle of the page. Its containing block is the conversation
+   body, so the percentages resolve against the content column; the host keeps
+   centring the title inside the block. */
 html[data-dsh-ccd-style="true"] .ST7X_W_root[data-phase="hero"] .bocITq_root {
   position: absolute;
-  inset: 88px auto auto 50%;
+  inset: 50% auto auto 50%;
   width: min(calc(var(--dsh-composer-card-max-width, 770px) + 32px), calc(100% - 32px));
   height: auto;
   padding: 0 16px;
-  translate: -50% 0;
+  translate: -50% -50%;
 }
 
-html[data-dsh-ccd-style="true"] .ST7X_W_root[data-phase="hero"] .bocITq_stack {
-  padding: 0;
-}
-
-html[data-dsh-ccd-style="true"] .ST7X_W_root[data-phase="hero"] .bocITq_headline {
-  justify-content: flex-start;
-  gap: 10px;
-  height: auto;
-}
-
-html[data-dsh-ccd-style="true"] .ST7X_W_root[data-phase="hero"] .bocITq_fishHitbox {
-  display: inline-flex;
-  align-items: center;
-}
-
+/* Only the brand mark, the title type and the preview badge are restyled. */
 html[data-dsh-ccd-style="true"] .ST7X_W_root[data-phase="hero"] .bocITq_fish {
   width: 26px;
   height: 20px;

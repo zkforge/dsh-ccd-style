@@ -65,11 +65,15 @@ html[data-dsh-ccd-style="true"] {
   --ccd-font-size-body: 14px;
   --ccd-font-size-muted: 13px;
   --ccd-font-size-headline: 26px;
+  /* The one step up from the host's own 400: used where a control has to read
+     as a chosen value rather than as chrome (model, reasoning effort). */
+  --ccd-font-weight-strong: 600;
 
-  /* The return glyph the Composer's send control draws. A mask, not a colour:
-     it is painted with the button's own `currentColor`, and drawing it as a
-     shape keeps it centred in the control instead of riding a font baseline. */
-  --ccd-icon-return: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16' fill='none' stroke='black' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M12.5 3.5V10H3'/%3E%3Cpath d='M6 7L3 10l3 3'/%3E%3C/svg%3E");
+  /* DSH 0.2.0-rc.2 ui-primitives shared artwork (MIT): IconSendOutlineRegular
+     and IconStopFillRegular. Masks reuse their 16px geometry with currentColor
+     while keeping React's official Composer buttons and SVG state markers. */
+  --ccd-icon-send: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16' fill='none'%3E%3Cpath d='M6.97211 1.94476C7.55785 1.35914 8.50767 1.35919 9.09343 1.94476L13.921 6.77228L13.2138 7.47939L8.38632 2.65187C8.19108 2.45682 7.87443 2.45677 7.67922 2.65187L2.74397 7.58711L2.03687 6.88L6.97211 1.94476Z' fill='black'/%3E%3Cpath d='M7.97571 14.5732L8.02421 2.34139' stroke='black' stroke-width='1'/%3E%3C/svg%3E");
+  --ccd-icon-stop: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Cpath d='M12.5 2.5H3.5C2.94772 2.5 2.5 2.94772 2.5 3.5V12.5C2.5 13.0523 2.94772 13.5 3.5 13.5H12.5C13.0523 13.5 13.5 13.0523 13.5 12.5V3.5C13.5 2.94772 13.0523 2.5 12.5 2.5Z' fill='black'/%3E%3C/svg%3E");
 
   /* Elevation */
   --ccd-shadow-card: 0 1px 2px rgb(0 0 0 / 4%);

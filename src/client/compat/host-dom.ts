@@ -12,8 +12,15 @@
  * - `packages/client/ui-sidebar/src/client/SidebarRoot.module.css` (`_3WPZCG_`)
  * - `packages/client/ui-conversation/src/client/ConversationRoot.module.css` (`ST7X_W_`)
  * - `packages/client/ui-conversation/src/client/InputBar.module.css` (`yhfFVG_`)
+ * - `packages/client/ui-model-selection/src/client/ModelSelect.module.css` (`cl2Rlq_`)
+ * - `packages/client/ui-permission-presets/src/client/PermissionSelect.module.css` (`wXeviG_`)
+ * - `packages/experimental/client-ui-agent-team/src/client/TeamAction.module.css` (`_2tNPVa_`)
+ * - `packages/client/ui-agent-preset/src/client/AgentPresetLabel.module.css` (`_3li69W_`)
+ * - `packages/client/ui-open-in-app/src/client/OpenTargetButton.module.css` (`iq4beG_`)
+ * - `packages/session-query/session-log-export/src/client/HeaderAction.module.css` (`Da3aKq_`)
  * - `packages/client/ui-conversation/src/client/ConversationHero.module.css` (`bocITq_`)
  * - `packages/client/ui-conversation/src/client/skeleton/ContextMeter.module.css` (`y0jqnG_`)
+ * - `packages/client/ui-attachment/src/client/ComposerAttachments.module.css` (`dVdiKa_`)
  * - `packages/client/ui-chat/src/client/chat/StatsPills.module.css` (`OpZ85W_`)
  * - `packages/client/ui-workspace/src/client/WorkspaceBrowser.module.css` (`_7514NG_`)
  * - `packages/client/ui-settings/src/client/SettingsRoot.module.css` (`Dws9Sa_`)
@@ -31,6 +38,8 @@ export const HOST = Object.freeze({
   sidebarBrand: '._3WPZCG_brand',
   sidebarBrandName: '._3WPZCG_brandName',
   sidebarTopStrip: '._3WPZCG_topStrip',
+  /** SidebarRoot.module.css: expanded macOS window-chrome toggle. */
+  sidebarToggle: '._3WPZCG_toggle',
   sidebarNewSession: '._3WPZCG_newSession',
   sidebarNewSessionLabel: '._3WPZCG_newSessionLabel',
   sidebarNewSessionShortcut: '._3WPZCG_newSessionShortcut',
@@ -52,6 +61,11 @@ export const HOST = Object.freeze({
   accountLabel: '.ZogL4G_label',
   conversationRoot: '.ST7X_W_root',
   conversationHeader: '.ST7X_W_header',
+  conversationCrumb: '.ST7X_W_crumb',
+  /** OpenTargetButton.module.css: leading icon half of the native split button. */
+  openTargetMain: '.iq4beG_main',
+  /** session-log-export/HeaderAction.module.css: native session action menu. */
+  sessionMoreButton: '.Da3aKq_moreButton',
   conversationBody: '.ST7X_W_body',
   conversationScroll: '.ST7X_W_scrollBody',
   conversationTabs: '.ST7X_W_tabs',
@@ -62,14 +76,37 @@ export const HOST = Object.freeze({
   composerRoot: '.yhfFVG_root',
   composerCard: '[data-composer-card]',
   composerCardClass: '.yhfFVG_card',
+  /** InputBar.module.css: workspace-less card's dashed ::after picker outline. */
+  composerCardWorkspaceTrigger: '.yhfFVG_cardWorkspaceTrigger',
   composerScroll: '.yhfFVG_scroll',
   composerInput: '.yhfFVG_input',
+  /** InputBar.module.css: overlay hint, distinct from the editable text. */
+  composerPlaceholder: '.yhfFVG_placeholder',
   composerAdd: '.yhfFVG_add',
   composerPrimary: '.yhfFVG_primary',
   composerRow: '.yhfFVG_row',
   composerTools: '.yhfFVG_tools',
   composerDock: '.yhfFVG_dock',
   composerTrailing: '.yhfFVG_trailing',
+  /** The draft-image rail the `ui-attachment` plugin renders into the card,
+      above the input panel (composer.css merges it into the input surface). */
+  composerAttachmentRail: '.dVdiKa_rail',
+  /** ComposerAttachments.module.css: the draft image button clips its image. */
+  composerAttachmentThumbnail: '.dVdiKa_thumbnail',
+  /** The Composer's model selector: one trigger carrying both texts. */
+  modelSelectTrigger: '.cl2Rlq_trigger',
+  modelSelectLabel: '.cl2Rlq_triggerLabel',
+  modelSelectEffort: '.cl2Rlq_triggerEffort',
+  /** PermissionSelect.module.css: compact permission text, keeping its button. */
+  permissionSelectLabel: '.wXeviG_triggerLabel',
+  /** TeamAction.module.css: native team dialog entry, retaining its label at every width. */
+  teamActionTrigger: '._2tNPVa_trigger',
+  teamActionLabel: '._2tNPVa_triggerLabel',
+  /** AgentPresetLabel.module.css: passive mode description, omitted from the conversation header. */
+  presetModeLabel: '._3li69W_label',
+  /** AgentPresetLabel.module.css: redundant icon may yield space to its text. */
+  presetModeIcon: '._3li69W_icon',
+  statsAnchor: '.OpZ85W_anchor',
   statsRoot: '.OpZ85W_root',
   statsLabel: '.OpZ85W_label',
   statsSeparator: '.OpZ85W_sep',

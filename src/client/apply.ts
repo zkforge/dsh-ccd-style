@@ -6,6 +6,7 @@ import { ENTRY_ID, PLUGIN_ID } from '../shared/identity.ts';
 import { createHostServices } from './compat/adapter.ts';
 import { mountComposerMenuPlacement } from './compat/composer-menus.ts';
 import { mountComposerStats } from './compat/stats-values.ts';
+import { mountComposerPlaceholder } from './compat/composer-placeholder.ts';
 import { createDomPort } from './compat/dom.ts';
 import { CleanupScope } from './core/cleanup.ts';
 import { mountFeatures } from './core/mount-features.ts';
@@ -76,6 +77,10 @@ export function apply(ctx: Context): void {
         scope.add(mountComposerStats(
           document,
           error => logger.error('composer: statistics readout observer failed', error),
+        ));
+        scope.add(mountComposerPlaceholder(
+          document,
+          error => logger.error('composer: placeholder observer failed', error),
         ));
         mountFeatures([
           shellFeature, sidebarFeature, newSessionFeature,

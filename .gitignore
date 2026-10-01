@@ -12,3 +12,4 @@ coverage/
 docs/reference/
 docs/verification/local/
 .verify/
+output/playwright/

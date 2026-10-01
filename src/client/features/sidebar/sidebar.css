@@ -7,24 +7,77 @@
  * brand row and a global panel list instead of CCD's Home/Code switch; those
  * real entries are kept and compacted rather than replaced by inert lookalikes.
  */
-html[data-dsh-ccd-style="true"] ._3WPZCG_root {
+/*
+ * Navigation overrides below style the *expanded* column. DSH's collapsed sidebar is a
+ * different layout — a 36px icon rail the host centres itself (`.collapsed`
+ * rules: root padding `18px 10px 6px`, logo row `padding: 0; height: 36px`,
+ * 36×36 buttons) and slides in from the right. Overriding that geometry leaves
+ * two icons off the rail's centre axis, so every expanded-layout override is
+ * scoped to `:not(._3WPZCG_collapsed)` and the rail keeps the host's numbers.
+ * The macOS window-chrome toggle is the exception: its two native owners share
+ * a window coordinate independently of the navigation column's geometry.
+ */
+html[data-dsh-ccd-style="true"] ._3WPZCG_root:not(._3WPZCG_collapsed) {
   --dsh-sidebar-inline-padding: var(--ccd-sidebar-inline-padding);
   /* The account row keeps its distance from the window's bottom edge. */
   padding: 0 var(--ccd-sidebar-inline-padding) var(--ccd-sidebar-bottom-padding);
   font-size: var(--ccd-font-size-muted);
 }
 
-/* Window controls sit at the left, past the traffic lights, as in the reference. */
-html[data-dsh-ccd-style="true"] ._3WPZCG_topStrip {
+/* Keep the window-control row above the brand in the expanded layout. */
+html[data-dsh-ccd-style="true"] ._3WPZCG_root:not(._3WPZCG_collapsed):not(._3WPZCG_fading) ._3WPZCG_topStrip {
   height: 48px;
   margin: 0 calc(-1 * var(--ccd-sidebar-inline-padding));
   padding: 0 0 0 88px;
   justify-content: flex-start;
 }
 
+/* On macOS the expanded sidebar and shell.leading own different native
+   buttons. Anchor both to the window, so neither the sidebar width nor its
+   clipping during the grid transition moves the click target. The frame
+   switches ownership immediately; hide the outgoing sidebar copy throughout
+   collapse instead of letting it fade over the shell's new button. */
+html[data-dsh-ccd-style="true"][data-platform="darwin"] {
+  --ccd-sidebar-toggle-left: 88px;
+}
+
+html[data-dsh-ccd-style="true"][data-platform="darwin"][data-fullscreen] {
+  --ccd-sidebar-toggle-left: 12px;
+}
+
+html[data-dsh-ccd-style="true"][data-platform="darwin"] ._3WPZCG_root ._3WPZCG_toggle {
+  position: fixed;
+  top: 11px;
+  left: var(--ccd-sidebar-toggle-left);
+  z-index: 15;
+  margin: 0;
+  width: 28px;
+  height: 28px;
+  animation: none;
+  -webkit-app-region: no-drag;
+}
+
+html[data-dsh-ccd-style="true"][data-platform="darwin"] [data-sidebar-collapsed] ._3WPZCG_toggle {
+  visibility: hidden;
+}
+
+html[data-dsh-ccd-style="true"][data-platform="darwin"] [data-shell-leading] {
+  top: 11px;
+  left: var(--ccd-sidebar-toggle-left);
+}
+
+html[data-dsh-ccd-style="true"][data-platform="darwin"] [data-shell-leading] button {
+  border-radius: 8px;
+  color: var(--ccd-text-secondary);
+}
+
+html[data-dsh-ccd-style="true"][data-platform="darwin"] [data-shell-leading] button:hover {
+  background: var(--ccd-hover);
+}
+
 /* The brand sits on the same inset as the navigation rows below it, so the mark
    and the app name line up with New Session and the panel glyphs. */
-html[data-dsh-ccd-style="true"] ._3WPZCG_logoRow {
+html[data-dsh-ccd-style="true"] ._3WPZCG_root:not(._3WPZCG_collapsed) ._3WPZCG_logoRow {
   height: 32px;
   margin-bottom: 6px;
   padding: 0 8px;
@@ -34,16 +87,16 @@ html[data-dsh-ccd-style="true"] ._3WPZCG_logoRow {
 
 /* The host pulls the brand row up under the window-control strip; the CCD
    header keeps them as two stacked rows. */
-html[data-dsh-ccd-style="true"] ._3WPZCG_topStrip + ._3WPZCG_logoRow {
+html[data-dsh-ccd-style="true"] ._3WPZCG_root:not(._3WPZCG_collapsed) ._3WPZCG_topStrip + ._3WPZCG_logoRow {
   margin-top: 0;
 }
 
-html[data-dsh-ccd-style="true"] ._3WPZCG_brand {
+html[data-dsh-ccd-style="true"] ._3WPZCG_root:not(._3WPZCG_collapsed) ._3WPZCG_brand {
   flex: 0 1 auto;
 }
 
-html[data-dsh-ccd-style="true"] ._3WPZCG_brandIdentity,
-html[data-dsh-ccd-style="true"] ._3WPZCG_brandName {
+html[data-dsh-ccd-style="true"] ._3WPZCG_root:not(._3WPZCG_collapsed) ._3WPZCG_brandIdentity,
+html[data-dsh-ccd-style="true"] ._3WPZCG_root:not(._3WPZCG_collapsed) ._3WPZCG_brandName {
   height: 20px;
   gap: 5px;
   font-size: 14px;
@@ -52,8 +105,8 @@ html[data-dsh-ccd-style="true"] ._3WPZCG_brandName {
   line-height: 20px;
 }
 
-html[data-dsh-ccd-style="true"] ._3WPZCG_brandMark svg,
-html[data-dsh-ccd-style="true"] [data-slot="sidebar.brand.mark"] svg {
+html[data-dsh-ccd-style="true"] ._3WPZCG_root:not(._3WPZCG_collapsed) ._3WPZCG_brandMark svg,
+html[data-dsh-ccd-style="true"] ._3WPZCG_root:not(._3WPZCG_collapsed) [data-slot="sidebar.brand.mark"] svg {
   width: 18px;
   height: auto;
 }
@@ -61,8 +114,8 @@ html[data-dsh-ccd-style="true"] [data-slot="sidebar.brand.mark"] svg {
 /* "+ New": a flat navigation row rather than a raised button. Its trailing gap
    is the panel list's own row gap, so New Session, the global panels and the
    automation panel read as one stack instead of two blocks. */
-html[data-dsh-ccd-style="true"] ._3WPZCG_newSession,
-html[data-dsh-ccd-style="true"][data-platform="darwin"] ._3WPZCG_newSession {
+html[data-dsh-ccd-style="true"] ._3WPZCG_root:not(._3WPZCG_collapsed) ._3WPZCG_newSession,
+html[data-dsh-ccd-style="true"][data-platform="darwin"] ._3WPZCG_root:not(._3WPZCG_collapsed) ._3WPZCG_newSession {
   justify-content: flex-start;
   height: 30px;
   margin: 0 0 var(--ccd-nav-gap);
@@ -75,22 +128,31 @@ html[data-dsh-ccd-style="true"][data-platform="darwin"] ._3WPZCG_newSession {
   font-weight: 400;
 }
 
-html[data-dsh-ccd-style="true"] ._3WPZCG_newSession:hover,
-html[data-dsh-ccd-style="true"][data-platform="darwin"] ._3WPZCG_newSession:hover {
+html[data-dsh-ccd-style="true"] ._3WPZCG_root:not(._3WPZCG_collapsed) ._3WPZCG_newSession:hover,
+html[data-dsh-ccd-style="true"][data-platform="darwin"] ._3WPZCG_root:not(._3WPZCG_collapsed) ._3WPZCG_newSession:hover {
   background: var(--ccd-hover);
 }
 
-html[data-dsh-ccd-style="true"] ._3WPZCG_newSessionContent {
+/* One icon column. The host draws this row's glyph 14px wide and the global
+   panel glyphs 16px, and gives the panel rows an 8px gap; left as is, the three
+   labels start at different x (39 / 42 / 42) and the glyph centres drift with
+   them. The plus therefore gets the same 16px slot and the same 8px gap, so
+   every row's icon is centred on one axis and every label starts at x=42. */
+html[data-dsh-ccd-style="true"] ._3WPZCG_root:not(._3WPZCG_collapsed) ._3WPZCG_newSessionContent {
   justify-content: flex-start;
-  gap: 7px;
+  gap: 8px;
 }
 
-html[data-dsh-ccd-style="true"] ._3WPZCG_panelList {
+html[data-dsh-ccd-style="true"] ._3WPZCG_root:not(._3WPZCG_collapsed) ._3WPZCG_newSessionContent > svg {
+  margin-inline: 1px;
+}
+
+html[data-dsh-ccd-style="true"] ._3WPZCG_root:not(._3WPZCG_collapsed) ._3WPZCG_panelList {
   gap: var(--ccd-nav-gap);
   margin-bottom: 10px;
 }
 
-html[data-dsh-ccd-style="true"] ._3WPZCG_panelRow {
+html[data-dsh-ccd-style="true"] ._3WPZCG_root:not(._3WPZCG_collapsed) ._3WPZCG_panelRow {
   min-height: 30px;
   margin: 0;
   padding: 4px 8px;
@@ -100,12 +162,12 @@ html[data-dsh-ccd-style="true"] ._3WPZCG_panelRow {
   line-height: 20px;
 }
 
-html[data-dsh-ccd-style="true"] ._3WPZCG_panelRow._3WPZCG_panelActive,
-html[data-dsh-ccd-style="true"] ._3WPZCG_panelRow:hover {
+html[data-dsh-ccd-style="true"] ._3WPZCG_root:not(._3WPZCG_collapsed) ._3WPZCG_panelRow._3WPZCG_panelActive,
+html[data-dsh-ccd-style="true"] ._3WPZCG_root:not(._3WPZCG_collapsed) ._3WPZCG_panelRow:hover {
   background: var(--ccd-hover);
 }
 
-html[data-dsh-ccd-style="true"] ._3WPZCG_panelGlyph {
+html[data-dsh-ccd-style="true"] ._3WPZCG_root:not(._3WPZCG_collapsed) ._3WPZCG_panelGlyph {
   color: var(--ccd-text-secondary);
 }
 
@@ -116,24 +178,27 @@ html[data-dsh-ccd-style="true"] ._3WPZCG_regionArea {
 }
 
 /* Browsing region: quiet section label, compact project and session rows. */
-html[data-dsh-ccd-style="true"] ._7514NG_root {
+html[data-dsh-ccd-style="true"] ._3WPZCG_root:not(._3WPZCG_collapsed) ._7514NG_root {
   --dsh-session-list-edge-inset: 0px;
   padding-right: 0;
 }
 
-html[data-dsh-ccd-style="true"] ._7514NG_sectionHeader {
+/* The rail keeps the host's own insets: this header holds the "add workspace"
+   icon in the collapsed layout, and the expanded layout's 8px inset would push
+   that one icon off the rail's centre axis. */
+html[data-dsh-ccd-style="true"] ._3WPZCG_root:not(._3WPZCG_collapsed) ._7514NG_sectionHeader {
   height: 30px;
   margin: 0 0 2px;
   padding-left: 8px;
   color: var(--ccd-text-muted);
 }
 
-html[data-dsh-ccd-style="true"] ._7514NG_sectionLabel {
+html[data-dsh-ccd-style="true"] ._3WPZCG_root:not(._3WPZCG_collapsed) ._7514NG_sectionLabel {
   font-size: 12px;
   line-height: 18px;
 }
 
-html[data-dsh-ccd-style="true"] ._7514NG_listArea {
+html[data-dsh-ccd-style="true"] ._3WPZCG_root:not(._3WPZCG_collapsed) ._7514NG_listArea {
   margin: 0;
   padding: 0;
 }
@@ -189,11 +254,16 @@ html[data-dsh-ccd-style="true"] .Dws9Sa_trigger {
   font-size: var(--ccd-font-size-muted);
 }
 
-html[data-dsh-ccd-style="true"] ._3WPZCG_iconButton {
+html[data-dsh-ccd-style="true"]:not([data-platform="darwin"]) ._3WPZCG_root:not(._3WPZCG_collapsed) ._3WPZCG_toggle {
+  /* Non-macOS keeps the native brand-row / icon-rail handoff. */
+  margin-left: auto;
+}
+
+html[data-dsh-ccd-style="true"] ._3WPZCG_root:not(._3WPZCG_collapsed) ._3WPZCG_iconButton {
   border-radius: 8px;
   color: var(--ccd-text-secondary);
 }
 
-html[data-dsh-ccd-style="true"] ._3WPZCG_iconButton:hover {
+html[data-dsh-ccd-style="true"] ._3WPZCG_root:not(._3WPZCG_collapsed) ._3WPZCG_iconButton:hover {
   background: var(--ccd-hover);
 }

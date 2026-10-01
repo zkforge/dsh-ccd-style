@@ -18,11 +18,17 @@ for (const [name, version] of Object.entries(pkg.devDependencies)) {
 }
 const browser = await readFile(join(root, 'lib/client.js'), 'utf8');
 let registration;
+/* Resource bookkeeping: every compat observer and window listener a module
+   opens must be closed again by teardown. */
+let observersOpened = 0;
+let observersClosed = 0;
+let listenersOpened = 0;
+let listenersClosed = 0;
 const sandbox = {
   window: {
     __ModuleLoader__: { load(row) { assert.equal(registration, undefined); registration = row; } },
-    addEventListener() {},
-    removeEventListener() {},
+    addEventListener() { listenersOpened += 1; },
+    removeEventListener() { listenersClosed += 1; },
   },
   console,
 };
@@ -41,9 +47,6 @@ client.apply(new Proxy({}, { get() { throw new Error('Disabled plugin accessed a
 // Desktop renderer or its settings UI.
 const attributes = new Map();
 const styles = new Set();
-/* Observer bookkeeping: every observer a compat module opens must be closed. */
-let observersOpened = 0;
-let observersClosed = 0;
 class FakeObserver {
   constructor() { observersOpened += 1; }
   observe() {}
@@ -116,9 +119,12 @@ teardown();
 assert.equal(attributes.has('data-dsh-ccd-style'), false);
 assert.equal(styles.size, 0);
 assert.equal(paletteLayers, 0);
-/* The compat observers are resources like any other: none may outlive teardown. */
+/* The compat observers and listeners are resources like any other: none may
+   outlive teardown. */
 assert.ok(observersOpened > 0, 'the compat layer must observe the host DOM');
 assert.equal(observersClosed, observersOpened);
+assert.ok(listenersOpened > 0, 'the compat layer must own its window listeners');
+assert.equal(listenersClosed, listenersOpened);
 const host = await import(pathToFileURL(join(root, 'lib/index.js')).href);
 assert.equal(typeof host.apply, 'function');
 assert.ok(host.Config);

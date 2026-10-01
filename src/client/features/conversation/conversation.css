@@ -5,6 +5,10 @@
  * stay entirely DSH's; only width, type and surface colours change. Host
  * classes are pinned in src/client/compat/host-dom.ts.
  */
+html[data-dsh-ccd-style="true"] .ST7X_W_root {
+  container: ccd-conversation / inline-size;
+}
+
 html[data-dsh-ccd-style="true"] .ST7X_W_header {
   background: var(--ccd-canvas);
   color: var(--ccd-text);
@@ -13,14 +17,14 @@ html[data-dsh-ccd-style="true"] .ST7X_W_header {
    * reference keeps every piece of header chrome on the title line. The two
    * wrapper boxes dissolve (`display: contents`) instead of being re-parented,
    * so the host's own children stay where React put them and only their order
-   * changes: title, Agent-preset chip, View switcher, utilities, corner.
+   * changes: title, View switcher, Agent-preset chip, utilities, corner.
    */
   display: flex;
   align-items: center;
   /* The host reserves the second row only while its tablist is a row of its
      own; that row is gone, so its `min-height: 76px` goes with it. */
   min-height: 0;
-  padding-bottom: 10px;
+  padding: 10px 4px 10px 12px;
 }
 
 html[data-dsh-ccd-style="true"] .ST7X_W_headerBlank {
@@ -39,26 +43,37 @@ html[data-dsh-ccd-style="true"] .ST7X_W_titleCluster {
 }
 
 html[data-dsh-ccd-style="true"] .ST7X_W_crumbs {
-  /* The dissolved title row used to carry the frame's leading clearance
-     (`max(0px, --dsh-frame-leading-clearance - 20px)`) as its own
-     `padding-inline-start`; with the row gone, the first thing it held has to
-     carry it, or the title slides under the macOS window buttons whenever the
-     sidebar collapses (that variable jumps to 160px, 84px in fullscreen). */
-  padding-inline-start: max(0px, calc(var(--dsh-frame-leading-clearance, 0px) - 20px));
+  /* Stable natural title width (capped at 112px) keeps the following switcher
+     anchored while the rightbar changes column width. */
+  flex: none;
+  box-sizing: border-box;
+  max-width: calc(112px + max(0px, var(--dsh-frame-leading-clearance, 0px) - 12px));
+  padding-inline-start: max(0px, calc(var(--dsh-frame-leading-clearance, 0px) - 12px));
 }
 
 html[data-dsh-ccd-style="true"] .ST7X_W_headerActions {
-  order: 1;
-  /* The dissolved title cluster's 10px gap, kept between title and chip. */
+  order: 2;
+  /* Stable gap between switcher and team entry.
+     `margin-right: auto` is the header's flexible gap: the title, the View
+     switcher and the chip stay grouped at the leading edge, as in the
+     reference, and the utilities keep the trailing edge they had before. The
+     chip always renders, so the gap survives an empty tools group. */
+  /* The preceding title has 8px end padding + the track's 2px margin.
+     Give the track-to-team boundary the same visible 10px separation. */
   margin-left: 10px;
+  gap: 4px;
+  margin-right: auto;
 }
 
 html[data-dsh-ccd-style="true"] .ST7X_W_headerUtilities {
   order: 3;
+  margin-left: 0;
+  gap: 0;
 }
 
 html[data-dsh-ccd-style="true"] .ST7X_W_headerCorner {
   order: 4;
+  margin-inline: 0;
 }
 
 /*
@@ -69,17 +84,16 @@ html[data-dsh-ccd-style="true"] .ST7X_W_headerCorner {
  * and the host's own underline is dropped.
  */
 html[data-dsh-ccd-style="true"] .ST7X_W_tabs {
-  order: 2;
+  order: 1;
   position: relative;
   /* Never squeezed: a narrow header truncates the title instead. */
   flex: none;
   display: inline-flex;
   align-items: stretch;
   gap: 0;
-  /* `margin-right: auto` is the header's flexible gap: the title, chip and
-     switcher stay grouped at the leading edge, as in the reference, and the
-     utilities keep the trailing edge they had before. */
-  margin: 0 auto 0 10px;
+  /* The switcher sits directly after the Session title; later header chrome
+     (the Agent-preset chip today, more to come) follows it. */
+  margin: 0 0 0 2px;
   padding: 0;
   border-radius: var(--ccd-radius-row);
   background: var(--ccd-track);
@@ -100,22 +114,25 @@ html[data-dsh-ccd-style="true"] .ST7X_W_tabs::before {
   background: var(--ccd-card);
   box-shadow: var(--ccd-shadow-segment);
   pointer-events: none;
-  transition: transform 180ms var(--ds-ease-in-out, ease), width 180ms var(--ds-ease-in-out, ease);
+  transition: transform var(--ccd-view-duration, 0ms) var(--ds-ease-in-out, ease),
+    width var(--ccd-view-duration, 0ms) var(--ds-ease-in-out, ease);
 }
 
 html[data-dsh-ccd-style="true"] .ST7X_W_tab {
   position: relative;
   z-index: 1;
   box-sizing: border-box;
-  height: var(--ccd-control-row-height);
-  padding: 0 14px;
+  flex: 0 0 40px;
+  width: 40px;
+  height: 22px;
+  padding: 0;
   border: 0;
   border-radius: var(--ccd-radius-row);
   background: transparent;
   color: var(--ccd-text-muted);
   font-size: var(--ccd-font-size-muted);
   font-weight: 500;
-  line-height: var(--ccd-control-row-height);
+  line-height: 20px;
   white-space: nowrap;
 }
 
@@ -139,9 +156,47 @@ html[data-dsh-ccd-style="true"] .ST7X_W_crumb {
   font-size: var(--ccd-font-size-muted);
 }
 
+html[data-dsh-ccd-style="true"] .ST7X_W_crumb {
+  max-width: 100%;
+}
+
 html[data-dsh-ccd-style="true"] .ST7X_W_headerActions button,
 html[data-dsh-ccd-style="true"] .ST7X_W_headerUtilities button {
   color: var(--ccd-text-secondary);
+}
+
+/* The collapsed macOS shell consumes 160px for native window controls. Keep
+   that reservation stable and omit title crumbs in this shell state, so a
+   400px column still fits the complete team entry and every native button. */
+html[data-dsh-ccd-style="true"][data-platform="darwin"] [data-sidebar-collapsed] .ST7X_W_header:not(.ST7X_W_headerBlank) .ST7X_W_crumbs {
+  max-width: none;
+}
+
+html[data-dsh-ccd-style="true"][data-platform="darwin"] [data-sidebar-collapsed] .ST7X_W_header:not(.ST7X_W_headerBlank) .ST7X_W_crumb {
+  display: none;
+}
+
+/* Keep the actionable team entry complete; omit the passive header mode. */
+html[data-dsh-ccd-style="true"] .ST7X_W_headerActions ._2tNPVa_triggerLabel {
+  display: inline;
+}
+
+html[data-dsh-ccd-style="true"] .ST7X_W_headerActions ._3li69W_label {
+  display: none;
+}
+
+html[data-dsh-ccd-style="true"] .ST7X_W_headerActions ._2tNPVa_trigger {
+  padding-inline: 0;
+}
+
+/* Recover eight pixels at the trailing tools, keeping the readable group gaps
+   even in the collapsed macOS shell's 400px column. Icon sizes stay native. */
+html[data-dsh-ccd-style="true"] .ST7X_W_headerUtilities .iq4beG_main {
+  padding-inline: 3px;
+}
+
+html[data-dsh-ccd-style="true"] .ST7X_W_headerUtilities .Da3aKq_moreButton {
+  width: 24px;
 }
 
 /* Transcript column keeps the reference's breathing room. */
