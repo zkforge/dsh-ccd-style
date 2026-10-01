@@ -1,4 +1,4 @@
-# DSH CCD Style · Agent 安装指南
+# DSH Claude Code Desktop Style · Agent 安装指南
 
 本指南用于让 agent 从源码完成 **预检 → 构建 → 安装 → 启用 → 验证**。目标环境为 **macOS + DeepSeek Harness Desktop `0.2.0-rc.2` + 浅色模式**。支持事实见 [兼容说明](docs/DSH_COMPATIBILITY.md)；项目介绍见 [README](README.md)。
 

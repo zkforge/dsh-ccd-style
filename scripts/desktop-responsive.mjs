@@ -92,7 +92,8 @@ for (const { width, height } of targets) {
         if (header === null || tabs === null) return null;
         const a = header.getBoundingClientRect();
         const b = tabs.getBoundingClientRect();
-        return b.top >= a.top && b.bottom <= a.bottom && Math.round(b.height) === 28;
+        return b.top >= a.top && b.bottom <= a.bottom
+          && Math.round(b.width) === 80 && Math.round(b.height) === 22;
       })(),
       tabsClearOfUtilities: (() => {
         const tabs = document.querySelector('.ST7X_W_tabs');

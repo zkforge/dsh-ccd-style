@@ -1,6 +1,6 @@
 # 项目架构
 
-更新日期：2026-10-02。本文件描述当前骨架事实；产品目标见 PLAN，验证状态见 [验证记录](docs/VERIFICATION.md)。
+更新日期：2026-10-02。本文件描述当前架构；各模块现状见 [实施状态](docs/IMPLEMENTATION.md)，验证状态见 [验证记录](docs/VERIFICATION.md)。
 
 插件消费 DSH 的配置、服务与界面插槽，输出可撤销的样式与展示组件。Workspace、Session、消息、输入编辑器与执行状态由 DSH 持有；本项目只拥有启用状态、设计变量、样式表、展示组件及其资源。四个界面 feature（shell、sidebar、new-session、conversation）已是 `implemented`；tool-calls 保留原生交互，statistics 因缺少真实全局用量接口保持关闭。
 
@@ -25,11 +25,11 @@ flowchart LR
 | `src/host` | Host 插件入口、Schemastery Config（`volatile` 字段进入设置表单） | shared、Host 运行依赖 |
 | `src/client/contracts` | FeatureEnvironment、FeatureDefinition、服务与 DOM 端口、配置表单端口 | shared、SDK 类型；CleanupScope 仅类型引用 |
 | `src/client/core` | 通用清理和 feature 装配流程 | contracts、shared、core |
-| `src/client/compat` | 固定版本的服务接入、DOM 端口、宿主类名与列宽补偿、插槽名称 | contracts、shared、compat |
+| `src/client/compat` | 固定版本的服务接入、DOM 端口、宿主类名、动态几何与展示适配 | contracts、shared、compat |
 | `src/client/theme` | 设计变量、语义 token 覆盖、两个 feature 共用的 Composer 几何 | contracts、shared、core、theme |
 | `src/client/features/*` | shell、sidebar、new-session、conversation、tool-calls、statistics | 本模块、公共契约／核心／兼容／主题；不能导入兄弟模块 |
 | `src/client/apply.ts` | 唯一的多模块运行组合点 | 上述客户端模块 |
-| `scripts` | 构建、架构检查、安装包检查与本地验证工具 | 开发依赖、Node IO |
+| `scripts` | 构建、架构检查、安装包检查与本地验证工具；`scripts/lib/` 是共享源码 | 开发依赖、Node IO |
 | `tests` | 资源恢复与失败隔离的行为验证 | 内部模块，不扩大公共导出 |
 
 **API 边界：** `HostServices` 使用 SDK 原始类型／派生类型；`DomPort` 是本项目管理样式与启用标记的端口；`ConfigFormsPort` 在 contracts 中结构化声明设置传输（提供方 `@deepseek-ai/dsh-client-ui-settings` 不在本项目的类型基线内，见兼容说明）。DSH 插槽组件 props 仍由 SDK 推导。Context 只进入 apply／兼容与注册世界，组件通过派生 props、注入数据和回调访问能力。
@@ -47,7 +47,7 @@ flowchart LR
 
 **架构约束：资源必须可逆。** 注册返回值、监听器、样式、观察器、异步取消都通过 `scope.add()` 管理。改变原有内联样式或属性时必须记录并恢复：目前只有根属性 `data-dsh-ccd-style`、打开中的菜单上的 `data-ccd-account-menu` 标记与 `--ccd-account-name`（两者都只在菜单打开期间存在，关闭或释放时移除）、被翻转到锚点上方的菜单的 `data-ccd-menu-flipped` 标记与同一模块为它写入的内联 `max-height`（关闭或释放时恢复菜单自己的值），Composer 上的 `--ccd-trailing-width`／`--ccd-model-max-width`、统计按钮上的 `--ccd-stat-value`，新会话默认提示语的现有 Text 节点与对应输入区 aria-label（仅在仍等于本插件写入的值时恢复），以及视图切换器轨道上的 `--ccd-view-x`／`--ccd-view-w`／`--ccd-view-duration`。DOM 不存在时保留原生 UI（样式表本身是惰性的，可以先行挂载）。
 
-**架构约束：不夺取宿主的所有权。** `sidebar`、`main.conversation` 等位置由官方组件独占并声明其子插槽；替换它们会让官方子位置一并消失。因此本项目只做加性注册与插件作用域样式，不复制官方 Composer、侧栏或会话壳。唯一需要读取宿主动态几何的地方是框架列宽（见下）。
+**架构约束：不夺取宿主的所有权。** `sidebar`、`main.conversation` 等位置由官方组件独占并声明其子插槽；替换它们会让官方子位置一并消失。因此当前实现只挂载插件作用域样式与展示适配，不复制官方 Composer、侧栏或会话壳，也不改写框架列宽。
 
 ## 版本相关的宿主适配
 
@@ -61,7 +61,9 @@ Composer 底部的两个位置需要读宿主动态结构：账号菜单的标�
 
 Host 构建为 ESM，运行依赖保持外置。Client 用 esbuild 打成单个 CommonJS factory，再包装为 `window.__ModuleLoader__.load({ id, factory(require) })`；React、Cordis 和 DSH 静态共享库从宿主模块表取得，不能打入私有副本。动态功能插件只能类型导入。
 
-CSS 按文本打进所属客户端模块，只有激活时挂载。声明文件由 TypeScript 生成；开发 watch 更新 JS/CSS，正式 build 更新声明。安装包仅包含 lib、patch、README 和 package.json。项目保持 private，公开发布前需补许可证。
+CSS 按文本打进所属客户端模块，只有激活时挂载。声明文件由 TypeScript 生成；开发 watch 更新 JS/CSS，正式 build 更新声明。安装包仅包含根目录 `lib/`、`cordis.patch.yml`、README、LICENSE 和 package.json。MIT 许可证及采用的 DSH 图标／文案归属已在 LICENSE 中声明；`private: true` 仍阻止 npm 公开发布。
+
+`npm run check` 覆盖类型、模块边界、颜色归属、现有 Markdown 的本地链接、行为测试、构建和包内容。文档检查从根目录与 `docs/` 自动发现 Markdown，不依赖已删除的计划文件。运行工具与证据的边界见 [验证记录](docs/VERIFICATION.md)；清理本地文件时，profile 或备份引用的 tarball 必须保留。
 
 ## 如何继续实现
 

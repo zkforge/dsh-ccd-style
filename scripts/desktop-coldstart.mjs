@@ -172,7 +172,6 @@ try {
         rev: boot.rev,
         rootAttribute: document.documentElement.getAttribute('data-dsh-ccd-style'),
         styleCount: tags.length,
-        sidebarDelta: frame.style.getPropertyValue('--ccd-sidebar-delta'),
         columns: getComputedStyle(frame).gridTemplateColumns,
       };`);
     const shot = await session.send('Page.captureScreenshot', { format: 'png' });

@@ -1,6 +1,6 @@
 # AGENTS.md
 
-本项目是 DSH 桌面版的 CCD 风格插件。用户已确认 macOS、浅色、新建页／聊天页／侧栏优先，使用 DSH 身份；先实现视觉和布局，高级交互后置。先读 [ARCHITECTURE.md](ARCHITECTURE.md)，再按 [docs/IMPLEMENTATION.md](docs/IMPLEMENTATION.md) 选模块；需求与图片见 [PLAN.md](PLAN.md)。
+本项目是 DSH 桌面版的 CCD 风格插件。用户已确认 macOS、浅色、新建页／聊天页／侧栏优先，使用 DSH 身份；先实现视觉和布局，高级交互后置。先读 [ARCHITECTURE.md](ARCHITECTURE.md)，再按 [docs/IMPLEMENTATION.md](docs/IMPLEMENTATION.md) 选模块；截图见 [README.md](README.md)，安装见 [install.md](install.md)，后续工作见 [docs/TECH_DEBT.md](docs/TECH_DEBT.md)。
 
 ## 工作约束
 
@@ -28,6 +28,8 @@ npm run pack:local
 ```
 
 `lib/` 是生成目录，不能手改。改变模块／SDK／构建协议时更新架构和兼容说明；每次交接更新验证记录，明确区分本地检查与真实 DSH 运行验证。视觉改动按同尺寸截图验收，不为纯 CSS 写重复断言；生命周期或业务入口变化需要针对对应行为验证。
+
+清理时保留 `scripts/lib/` 源码、设计参考图、最新验收证据，以及 profile 或配置备份仍引用的安装包；其他生成文件可按构建命令重建。文档描述当前状态，已被取代的修复过程查 Git 历史。
 
 ## 代理
 

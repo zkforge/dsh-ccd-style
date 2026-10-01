@@ -11,9 +11,11 @@
  * Verification tool only; never packaged.
  *
  * Usage:
- *   node scripts/desktop-preview.mjs apply [--sidebar-delta -16]
+ *   node scripts/desktop-preview.mjs apply
  *   node scripts/desktop-preview.mjs clear
- *   node scripts/desktop-preview.mjs shot <out.png>     (apply, screenshot, clear)
+ *   node scripts/desktop-preview.mjs shot <out.png> [--size 1374x871]
+ * Preview styles remain until `clear` or a renderer reload. This is CSS-only:
+ * use the installed plugin to verify menus, statistics, tabs and placeholder adapters.
  */
 import { readFileSync } from 'node:fs';
 import { writeFileSync } from 'node:fs';
@@ -76,8 +78,6 @@ async function connect() {
 
 const [command, ...rest] = process.argv.slice(2);
 const css = [...STYLE_FILES.map(file => `/* ${file} */\n${readFileSync(join(root, file), 'utf8')}`), PALETTE].join('\n');
-const deltaIndex = rest.indexOf('--sidebar-delta');
-const delta = deltaIndex === -1 ? null : rest[deltaIndex + 1];
 
 const session = await connect();
 try {
@@ -85,7 +85,6 @@ try {
     await session.evaluate(`
       for (const node of document.querySelectorAll('[data-ccd-preview]')) node.remove();
       document.documentElement.removeAttribute('data-dsh-ccd-style');
-      document.querySelector('[data-slot="root"] > div')?.style.removeProperty('--ccd-sidebar-delta');
       return 'cleared';`);
     console.log('cleared');
   } else {
@@ -97,16 +96,7 @@ try {
       style.textContent = ${JSON.stringify(css)};
       document.head.appendChild(style);
       document.documentElement.setAttribute('data-dsh-ccd-style', 'true');
-      const frame = document.querySelector('[data-slot="root"] > div');
-      if (frame !== null) {
-        if (${JSON.stringify(delta)} !== null) frame.style.setProperty('--ccd-sidebar-delta', ${JSON.stringify(delta)});
-        else if (frame.style.getPropertyValue('--ccd-sidebar-delta') === '') {
-          const track = Number.parseFloat(getComputedStyle(frame).gridTemplateColumns.split(' ')[0]);
-          const collapsed = frame.hasAttribute('data-sidebar-collapsed');
-          frame.style.setProperty('--ccd-sidebar-delta', collapsed || !(track > 0) ? '0px' : Math.min(0, 264 - Math.round(track)) + 'px');
-        }
-      }
-      return { delta: frame?.style.getPropertyValue('--ccd-sidebar-delta'), styles: document.querySelectorAll('style[data-plugin="dsh-ccd-style"]').length };`);
+      return { styles: document.querySelectorAll('style[data-plugin="dsh-ccd-style"]').length };`);
     console.log(JSON.stringify(applied));
     if (command === 'geom') {
       const sizeIndex = rest.indexOf('--size');
@@ -124,9 +114,8 @@ try {
         return {
           viewport: [innerWidth, innerHeight],
           sidebarTrack: getComputedStyle(document.querySelector('[data-slot="root"] > div')).gridTemplateColumns,
-          delta: document.querySelector('[data-slot="root"] > div').style.getPropertyValue('--ccd-sidebar-delta'),
           sidebar: box('[data-slot="sidebar"] > *'),
-          center: box('[data-slot="main"]')?.length ? null : null,
+          center: box('[data-slot="main"]'),
           header: box('header[data-window-drag]'),
           body: box('[data-conversation-content]'),
           input: box('[data-input-scroll]'),
@@ -141,7 +130,7 @@ try {
       await session.send('Emulation.clearDeviceMetricsOverride');
       console.log(JSON.stringify(geometry, null, 2));
     } else if (command === 'shot') {
-      const out = rest.find(argument => !argument.startsWith('--') && argument !== delta);
+      const out = rest[0];
       const sizeIndex = rest.indexOf('--size');
       const size = sizeIndex === -1 ? null : rest[sizeIndex + 1];
       if (size !== null) {
