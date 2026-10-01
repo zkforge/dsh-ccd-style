@@ -1,0 +1,226 @@
+/*
+ * Shared composer geometry.
+ *
+ * Both the blank-session page and the conversation page must place the official
+ * Composer at the same width and shape, so the geometry lives here instead of
+ * being duplicated in two features (siblings never import each other). The
+ * upstream structure is kept: the resident Composer card stays the single
+ * editable root, and only where its parts sit changes.
+ *
+ * Reference geometry (@2x reference screenshots, logical px at 1374x871):
+ * - input surface: 770x42, 1px border, radius 10, text line 24px at 8/14 padding
+ * - the send control is the return arrow *inside* that surface, 24px, 14px in
+ *   from the right border and on the first text line
+ * - control row: outside the surface, 4px below it, ~28px tall
+ * - window edge: 8px below the row
+ *
+ * Host classes are pinned in src/client/compat/host-dom.ts.
+ */
+html[data-dsh-ccd-style="true"] .ST7X_W_body {
+  --dsh-chat-content-width: var(--ccd-composer-width);
+  --dsh-composer-card-max-width: var(--ccd-composer-width);
+  --dsh-composer-side-clearance: 16px;
+}
+
+/* The card becomes a transparent column: the input surface draws the border. */
+html[data-dsh-ccd-style="true"] .yhfFVG_card {
+  gap: 0;
+  padding-top: 0;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+}
+
+html[data-dsh-ccd-style="true"] .yhfFVG_scroll {
+  box-sizing: border-box;
+  min-height: var(--ccd-composer-min-height);
+  margin-right: 0;
+  padding: var(--ccd-composer-padding);
+  border: 1px solid var(--ccd-border-strong);
+  border-radius: var(--ccd-composer-radius);
+  background: var(--ccd-card);
+  box-shadow: var(--ccd-shadow-card);
+}
+
+html[data-dsh-ccd-style="true"] .yhfFVG_input,
+html[data-dsh-ccd-style="true"] .yhfFVG_hero .yhfFVG_input {
+  box-sizing: border-box;
+  min-height: 24px;
+  /* Room for the send control on the first line. */
+  padding: 0 var(--ccd-send-reserve) 0 0;
+  font-family: var(--ccd-font-ui);
+  font-size: var(--dsh-content-font-size, 14px);
+  line-height: 24px;
+  color: var(--ccd-text);
+}
+
+html[data-dsh-ccd-style="true"] .yhfFVG_placeholder {
+  inset: 0 auto auto 0;
+  padding-right: var(--ccd-send-reserve);
+  color: var(--ccd-text-placeholder);
+  font-size: var(--dsh-content-font-size, 14px);
+  line-height: 24px;
+}
+
+/* Send / stop: a bare return glyph on the input surface's first line. The host
+   swaps the glyph for a filled square while generating; that one keeps its
+   shape and only loses the button chrome. */
+html[data-dsh-ccd-style="true"] .yhfFVG_primary {
+  /* The user agent's `1px 6px` button padding is asymmetric against a 24px box
+     only in the sense that it steals the content box; drop it and centre. */
+  padding: 0;
+  position: absolute;
+  top: var(--ccd-composer-padding-block);
+  right: var(--ccd-composer-padding-inline);
+  width: var(--ccd-send-size);
+  height: var(--ccd-send-size);
+  border-radius: var(--ccd-radius-row);
+  background: transparent;
+  color: var(--ccd-text-secondary);
+  transform: none;
+  transition: background-color 0.1s, color 0.1s;
+}
+
+html[data-dsh-ccd-style="true"] .yhfFVG_primary:hover:not(:disabled) {
+  background: var(--ccd-hover);
+  color: var(--ccd-text);
+}
+
+html[data-dsh-ccd-style="true"] .yhfFVG_primary:disabled {
+  background: transparent;
+  opacity: 0.4;
+}
+
+html[data-dsh-ccd-style="true"] .yhfFVG_primary:not(:has(rect)) svg {
+  display: none;
+}
+
+html[data-dsh-ccd-style="true"] .yhfFVG_primary:not(:has(rect))::before {
+  content: "";
+  width: 16px;
+  height: 16px;
+  background-color: currentColor;
+  mask: var(--ccd-icon-return) center / 16px 16px no-repeat;
+}
+
+/* Tool row: outside the surface, directly below it. */
+html[data-dsh-ccd-style="true"] .yhfFVG_row {
+  /* The host makes this row an inline-size container, which also makes it the
+     containing block for absolutely positioned descendants. The send control is
+     moved onto the input surface, whose top this row cannot see, so the
+     containment is dropped here and the card keeps that job. */
+  container-type: normal;
+  min-height: var(--ccd-control-row-height);
+  margin-top: var(--ccd-composer-row-gap);
+  padding: 0 var(--ccd-composer-row-inset);
+  color: var(--ccd-text-secondary);
+  font-size: var(--ccd-font-size-muted);
+}
+
+html[data-dsh-ccd-style="true"] .yhfFVG_row button {
+  color: var(--ccd-text-secondary);
+}
+
+/* The command button is a bare glyph in the reference, not a filled circle. */
+html[data-dsh-ccd-style="true"] .yhfFVG_add {
+  width: var(--ccd-control-row-height);
+  height: var(--ccd-control-row-height);
+  border-radius: var(--ccd-radius-row);
+  background: transparent;
+  color: var(--ccd-text-secondary);
+}
+
+html[data-dsh-ccd-style="true"] .yhfFVG_add:hover:not(:disabled) {
+  background: var(--ccd-hover);
+  color: var(--ccd-text);
+}
+
+html[data-dsh-ccd-style="true"] .yhfFVG_tools {
+  align-items: center;
+}
+
+/* Statistics cluster: the dock is a sibling of the card inside the Composer root,
+   so it is laid over the tool row's right end instead of taking a line of its
+   own. Every readout keeps its own icon and its click-open detail panel; only
+   the always-on labels go. The root becomes the containing block, and the
+   offsets below walk back in from the column edge to the card's own right edge,
+   which the dock cannot see from where it sits. */
+html[data-dsh-ccd-style="true"] .yhfFVG_root {
+  position: relative;
+}
+
+html[data-dsh-ccd-style="true"] .yhfFVG_dock {
+  position: absolute;
+  /* Before the model selector, which stays the row's last in-flow control. */
+  right: calc((100% - min(100% - 32px, var(--ccd-composer-width))) / 2
+    + var(--ccd-composer-row-inset) + var(--ccd-trailing-width, 120px) + var(--ccd-dock-gap));
+  bottom: var(--ccd-composer-bottom-gap);
+  height: var(--ccd-control-row-height);
+  padding: 0;
+  gap: 2px;
+  align-items: center;
+  justify-content: flex-end;
+}
+
+html[data-dsh-ccd-style="true"] .OpZ85W_root {
+  gap: 2px;
+  align-items: center;
+}
+
+/* Same control shape as the model and permission selectors next to them: the
+   host draws these readouts as full pills (`border-radius: 999px`), which reads
+   as a different family of control in the same row. */
+html[data-dsh-ccd-style="true"] .OpZ85W_pill,
+html[data-dsh-ccd-style="true"] .y0jqnG_trigger {
+  gap: 4px;
+  height: var(--ccd-control-row-height);
+  padding: 0 6px;
+  border-radius: var(--ccd-radius-row);
+  color: var(--ccd-text-secondary);
+  font-size: var(--ccd-font-size-muted);
+}
+
+/* One icon, one number: the sentence the host renders is replaced by the single
+   value the compat layer reads out of it (compat/stats-values.ts). */
+html[data-dsh-ccd-style="true"] .OpZ85W_label,
+html[data-dsh-ccd-style="true"] .OpZ85W_sep {
+  display: none;
+}
+
+html[data-dsh-ccd-style="true"] .OpZ85W_pill::after {
+  content: var(--ccd-stat-value, "");
+  font-variant-numeric: tabular-nums;
+}
+
+/* The context ring keeps its percentage: that is already one number. */
+html[data-dsh-ccd-style="true"] .y0jqnG_trigger > span {
+  font-variant-numeric: tabular-nums;
+}
+
+/* Hero keeps the workspace row above the composer, as the reference does. */
+html[data-dsh-ccd-style="true"] .ST7X_W_composerHero {
+  gap: 6px;
+  padding-bottom: 0;
+}
+
+/* Bottom inset: row → window edge. */
+html[data-dsh-ccd-style="true"] .yhfFVG_root,
+html[data-dsh-ccd-style="true"] .yhfFVG_hero {
+  padding-bottom: var(--ccd-composer-bottom-gap);
+}
+
+/* The chips row lines up with the input surface below it: the Composer root
+   insets that surface by the side clearance, so the row carries the same inset
+   plus the reference's 4px. */
+html[data-dsh-ccd-style="true"] .ST7X_W_heroWorkspaceRow {
+  justify-content: flex-start;
+  height: 26px;
+  padding: 0 calc(var(--dsh-composer-side-clearance, 16px) + var(--ccd-composer-row-inset));
+}
+
+html[data-dsh-ccd-style="true"] .bocITq_workspace {
+  min-height: 26px;
+  color: var(--ccd-text-secondary);
+  font-size: var(--ccd-font-size-muted);
+}

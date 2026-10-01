@@ -1,0 +1,66 @@
+/*
+ * Signed-in account menu.
+ *
+ * The reference draws the card the sidebar's account row opens as a wide menu
+ * whose first block is the account itself. The compat layer tags the open menu
+ * (`compat/account-menu.ts`) and mirrors the signed-in name onto it, so these
+ * rules only reshape the host's own rows: no row is added, renamed or reordered.
+ *
+ * Menu surfaces and rows come from ui-primitives `Menu.module.css`; the tag is
+ * the plugin's own. Sources are pinned in src/client/compat/host-dom.ts.
+ */
+/* The foot row is a hit target, not a panel: the reference's fill is a slim bar,
+   so the row is as short as the avatar allows and stays pinned to the window's
+   bottom edge. */
+html[data-dsh-ccd-style="true"] .ZogL4G_trigger,
+html[data-dsh-ccd-style="true"] .Dws9Sa_trigger {
+  height: var(--ccd-account-trigger-height);
+  padding: 0 6px;
+  border-radius: var(--ccd-radius-row);
+}
+
+html[data-dsh-ccd-style="true"] .ZogL4G_trigger[data-collapsed="true"] {
+  height: var(--ccd-account-trigger-height);
+}
+
+html[data-dsh-ccd-style="true"] [data-ccd-account-menu] {
+  box-sizing: border-box;
+  width: var(--ccd-account-menu-width);
+  min-width: var(--ccd-account-menu-width);
+  max-width: var(--ccd-account-menu-width);
+  padding: var(--ccd-account-menu-padding);
+  border-radius: var(--ccd-radius-panel);
+}
+
+/* The account header the reference shows above the rows. */
+html[data-dsh-ccd-style="true"] [data-ccd-account-menu]::before {
+  content: var(--ccd-account-name, "");
+  display: block;
+  padding: 4px 8px 8px;
+  color: var(--ccd-text-muted);
+  font-size: var(--ccd-font-size-muted);
+  font-weight: 400;
+  line-height: 18px;
+}
+
+html[data-dsh-ccd-style="true"] [data-ccd-account-menu] [role="menuitem"] {
+  min-height: var(--ccd-account-row-height);
+  padding: 0 10px;
+  border-radius: var(--ccd-radius-row);
+  color: var(--ccd-text);
+  font-size: var(--ccd-font-size-muted);
+  line-height: 20px;
+}
+
+html[data-dsh-ccd-style="true"] [data-ccd-account-menu] [role="menuitem"]:hover,
+html[data-dsh-ccd-style="true"] [data-ccd-account-menu] [role="menuitem"]:focus-visible {
+  background: var(--ccd-hover);
+}
+
+/* Row cells are wrapped by the primitive; the last group reads as its own
+   block, which is where the reference draws its final hairline. */
+html[data-dsh-ccd-style="true"] [data-ccd-account-menu] div:has(> [role="menuitem"]):last-child {
+  margin-top: 4px;
+  padding-top: 4px;
+  border-top: 0.5px solid var(--ccd-border-soft);
+}

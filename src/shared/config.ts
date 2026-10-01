@@ -46,3 +46,29 @@ export function resolveConfig(input: StyleOptions = {}): StyleConfig {
     features: Object.freeze(features),
   });
 }
+
+/**
+ * Fold the Host-served configuration section into a validated StyleConfig.
+ * The client half reads its configuration through the settings transport, so
+ * the value arrives as untyped JSON from a user-editable patch file: unknown
+ * keys, wrong types and an absent section all fall back to the declared
+ * defaults instead of failing the whole activation.
+ * @param value - the section value from the Host, or undefined before it loads.
+ * @returns the validated configuration; never throws.
+ */
+export function adoptConfig(value: unknown): StyleConfig {
+  if (typeof value !== 'object' || value === null) return resolveConfig();
+  const input = value as { enabled?: unknown; debug?: unknown; features?: unknown };
+  const features: Record<FeatureId, boolean> = { ...DEFAULT_FEATURES };
+  if (typeof input.features === 'object' && input.features !== null) {
+    const raw = input.features as Partial<Record<FeatureId, unknown>>;
+    for (const id of FEATURE_IDS) {
+      if (typeof raw[id] === 'boolean') features[id] = raw[id];
+    }
+  }
+  return resolveConfig({
+    ...(typeof input.enabled === 'boolean' ? { enabled: input.enabled } : {}),
+    ...(typeof input.debug === 'boolean' ? { debug: input.debug } : {}),
+    features,
+  });
+}

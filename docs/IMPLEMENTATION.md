@@ -1,39 +1,83 @@
-# 后续模型实施交接
+# 项目状态与实施交接
 
-从 README、ARCHITECTURE 和 PLAN 入手。当前可以构建骨架；所有界面模块是 planned。用户本轮仅要求搭架构，完整 CCD UI 由后续模型实施。无需重新采访已确定的需求，也无需等待录屏。
+更新日期：2026-10-01。四个核心界面模块已经实现并在真实 Desktop 中验证；本文件记录每个模块**现在**做了什么、边界在哪，以及剩余动作。结构事实见 [ARCHITECTURE.md](../ARCHITECTURE.md)，需求与截图基准见 [PLAN.md](../PLAN.md)，验证结果见 [验证记录](VERIFICATION.md)。
 
-## 第一步：真实加载验证
+## 实现方式（统一前提）
 
-运行 npm ci、npm run check，生成本地包；在测试项目／会话中安装，验证默认停用、插件配置启用与重载、停用恢复。读取实际 SDK 的插槽所有权与组件 props，做一个可撤销的小型覆盖，验证 Composer Factory 复用。不要把源码检查或 VM 中 factory 执行写成“桌面版验证通过”。
+新会话页与聊天页都是 `conversation.content` 的两种 phase（`hero` / `active`），Composer 是官方 `conversation.composer.bar`。因此四个模块都**不替换**宿主组件，只做两件事：
 
-新增功能遵循 FeatureDefinition：把对应入口改为 implemented，实现 mount(environment, scope)，保留任务／状态记录。Context 不进入组件；所有注册 disposer 进入 scope。可用设置入口由 DSH 原功能提供，专用风格开关 UI 可在实际注册位置核实后补充。
+1. 通过 `environment.dom.mountStyles()` 挂载作用域样式（`html[data-dsh-ccd-style="true"]`）；
+2. 只在必须读取宿主动态几何时使用兼容层（打开中的账号菜单、贴着窗口底边的菜单翻转）。
+
+所有特效样式表都是惰性的：宿主元素尚未渲染时挂载不会产生任何效果，因此可以无条件挂载，避免「在插件面板页启用后切回会话却没有样式」的问题。
 
 ## shell
 
-入口：src/client/features/shell/index.ts。先处理侧栏约 264 px、近白背景、主画布及 macOS 顶部空间。拖动区、窗口按钮、隐藏侧栏后的入口必须有效。版本相关样式挂载点放 compat。完成条件是同尺寸骨架对齐与停用恢复，不只改变背景色。
+入口：`src/client/features/shell/index.ts` + `shell.css`。
+
+- 去掉 macOS 侧栏的蓝紫渐变底色，改为平铺设计色；
+- 分隔线画在侧栏自己的右边缘（1px `--ccd-border`），中列不再重复画左边缘；
+- 三列轨道完全交给 `ui-layout`：插件不写宽度、不发布差值，所以拖动分隔条时线与指针同步（实测 ±40px 跟随，收缩到 DSH 自己的 264px 下限）。
 
 ## sidebar
 
-入口：src/client/features/sidebar/index.ts。用 DSH Workspace 映射项目，用标准 hooks 读取项目／会话，通过 HostServices.workspace 的真实操作导航。压缩品牌区、重排新建和“更多”、校准选中态、行高、标题与底部账号区。若整体 sidebar 覆盖受到 child 所有权限制，先实现正式细粒度扩展，记录可用方案。不要制作无功能的 Home／Code／Routines 按钮。
+入口：`src/client/features/sidebar/index.ts` + `sidebar.css`。
+
+- 侧栏内边距、行高、圆角、选中态按参考图压缩；
+- 品牌行压缩为紧凑一行（顶部控制条之下），并与下方导航行同缩进（8px），标志与名称和新会话／插件图标对齐；
+- 「新会话」从凸起按钮改为扁平导航行；全局面板行同规格；
+- 项目分组与会话行使用宿主类名压缩到 30/28px，时间戳与图标降噪；
+- 底部账号行压到 30px（宿主默认 44px）、圆角 8px，并与窗口底边留 8px（`--ccd-sidebar-bottom-padding`），hover 背景不再贴住窗口边缘；分隔线保留在行上方；
+- 账号菜单按参考图展开成卡片：236px 宽、账号名作为页眉、28px 行高、末组上方一条细分隔线；菜单条目仍是 DSH 自己的三条（设置／意见反馈／退出登录），插件不增删条目；参考图的 272×208 是六条目 + 双行页眉的尺寸，DSH 只有三条且账号行没有工作区文案，因此取更窄的行高节奏而不是照抄外框；
+- 「新会话」「插件」「自动化任务」三行共用 `--ccd-nav-gap`（2px）节奏，hover 背景等距。
+
+未做：参考图的 Home/Code 分段控件、Routines/Customize/More 导航行没有对应的 DSH 能力，按约束不制作空按钮；DSH 的品牌行与「插件」面板行保留在原位。
 
 ## new-session
 
-入口：src/client/features/new-session/index.ts。上部问候／内容、底部 Composer，目标输入卡片约 769 px 宽、43 px 最小高度。33 px 是卡片底边到窗口底边的参考距离，包含下方控件布局，不能简单当作整个输入组件的 bottom 值。优先复用官方结构／Factory。多行输入、IME、附件、草稿、权限与模型选择仍可用。
+入口：`src/client/features/new-session/index.ts` + `new-session.css`。
+
+- `hero` phase 的问候块从居中改为绝对定位到内容列顶部（与 Composer 列左对齐）；
+- 工作区／模式选择行与输入面板左边缘对齐：行内边距 = 侧向留白 + 4px，实测选择器左边缘在输入面板左边缘右侧 4px（与参考图一致）；
+- Composer 区块用 `margin-top: auto` 推到底部；
+- `--dsh-chat-content-width` 与 `--dsh-composer-card-max-width` 设为 770px，输入卡片据此居中；
+- 参考图 `docs/reference/ccd-new-session.png` 实测（窗口原点 x=112/y=76 @2x）：输入框 y=795..836、x=431..1187（770×41）；实现实测 y=792..833、x=431..1201，误差 ≤3px；
+- 控制行在输入框下方 4px，行内元素中心与参考图一致（参考图 y≈851.8，实现 852）。
 
 ## conversation
 
-入口：src/client/features/conversation/index.ts。重排顶栏和正文宽度，校准用户消息、助手排版、列表与代码块，复用统一底部输入区。保留滚动、发送／停止、审批、右栏、修改和产物入口。Composer 的共同布局若跨模块使用，应提取到公共主题／兼容层，不由两个 feature 互相导入。
+入口：`src/client/features/conversation/index.ts` + `conversation.css`，共用几何在 `src/client/theme/composer.css`。
+
+- 卡片外壳透明化，边框与圆角移到输入面板（`.yhfFVG_scroll`），控制行留在面板下方 4px 处——参考图同样是「有边框的输入面板 + 面板外的控制行」；
+- 输入面板最小高度 42px，随内容增长；控制行 28px；输入框底边到窗口底边合计 38px（参考图 34.5px）；
+- 发送／停止按钮移进输入面板第一行右侧（24px、透明底、8px 圆角，与同排控件同形；生成中保留宿主的停止方块图标），输入文本为其预留 30px；
+- `↵` 用 `--ccd-icon-return` 遮罩绘制而不是文字字符：字符会跟着字体基线走（实测偏右 1.5px、偏上 2px），遮罩在 24px 按钮里几何居中（实测停止方块偏移 0/0，`↵` 偏移 -0.5/0）；
+- 「+」命令按钮去掉宿主的圆形底色，改为 28px 无底色图标；
+- 三个读数与同排控件同形：高度 28px、圆角 8px（等于宿主的 `--dsw-radius-sm`），与模型／权限选择器、`+` 按钮完全一致；选择「和模型／权限选择器统一」而不是保留宿主胶囊形，是因为同一排里的可点控件应当属于同一族；
+- 会话用量与上下文占用（`conversation.composer.dock` + `ContextMeter`）不再单独占一行：dock 是卡片的兄弟节点，因此绝对定位到控制行上、**模型选择之前**（偏移量由 `--ccd-trailing-width` 实时测得，见 `compat/stats-values.ts`）；每个读数只保留「图标 + 一个数字」——速率 `210 tok/s`、用量 `117M tok`、上下文 `19%`，点击仍打开原有详情面板；
+- 正文列宽 770px；用户消息气泡底色、圆角、内边距按参考图调整；
+- 工具行、推理行、代码块的文字颜色降噪；
+- 顶栏合成一行：`.ST7X_W_titleRow` 与 `.ST7X_W_titleCluster` 用 `display: contents` 溶解（不搬动任何宿主节点），再靠 flex `order` 把 DSH 自己的视图切换器排到 Agent 预设芯片之后、工具图标之前；宿主为第二行预留的 `min-height: 76px` 随之去掉，会话页顶栏由 76px 收到 49px，空白会话仍保持原来的 40px；
+- 溶解掉的那一行原本还承担「让开 macOS 窗口按钮」的留白（`padding-inline-start: max(0px, --dsh-frame-leading-clearance - 20px)`），这条留白改挂在该行的第一个子元素 `.ST7X_W_crumbs` 上：收起侧栏时 `--dsh-frame-leading-clearance` 会跳到 160px（全屏 84px），标题因此仍然从 160px 开始，不会滑到红绿灯下面；
+- 视图切换器（对话／轨迹）改成参考图的分段控件：宿主自己的 `role="tablist"` 与两个 `role="tab"` 按钮原样使用——角色、标签、点击处理、`aria-selected` 与「开发者工具关闭时隐藏轨迹」的过滤都还是宿主的，插件只画外壳：轨道 108×28、8px 圆角浅灰底，选中段是轨道 `::before` 的白色滑块（1px 边框 + 8px 圆角 + 细分阴影，与参考图同为「滑块铺满选中格」）；滑块位置由 `compat/view-switch.ts` 实测选中按钮后发布 `--ccd-view-x`／`--ccd-view-w`，切换时 180ms 平滑移动，`prefers-reduced-motion` 下不动画。
+
+未做：参考图顶栏没有这组视图切换（CCD 只有标题 + 芯片 + 图标），本轮按用户要求把它并入顶栏而不是删除；DSH 的 `对话／轨迹` 原生功能因此完全保留。
 
 ## tool-calls
 
-入口：src/client/features/tool-calls/index.ts。首版默认关闭，保留原生展示。后续要重构一行概要和展开时，使用 tool.call.toolview，保留准备、执行、结果、失败、授权和子调用信息；不得更改工具生命周期。
+入口：`src/client/features/tool-calls/index.ts`，状态 `planned`，默认关闭。首版保留原生工具展示与展开交互。续做时用 `tool.call.toolview`，保留准备、执行、结果、失败、授权与子调用信息，不改工具生命周期。
 
 ## statistics
 
-入口：src/client/features/statistics/index.ts。首版默认关闭。先确定真实全局用量接口及可聚合范围，再决定统计卡片和热力图。接口缺失时保持关闭；不放示例数字。若需 Host 路由，先记录具体数据边界并扩展 Host 层，不能从展示组件读取 profile 文件。
+入口：`src/client/features/statistics/index.ts`，状态 `planned`，默认关闭。参考图的 Overview 卡片需要全局会话数、消息数、token 总量、活跃天、峰值时段与热力图。DSH `0.2.0-rc.2` 没有可聚合这些数字的全局用量接口：会话级用量只存在于当前会话的 `conversation.composer.dock`（`ui-chat` StatsPills），跨会话统计需要新增 Host 路由。因此首版不放统计区，也不使用示例数字。续做时先确定 Host 数据边界，再扩展 Host 层。
 
-## 交付要求
+## 交付与验证工具
 
-每个模块提交代码、必要行为验证、同尺寸目标／实际对照图以及 docs/VERIFICATION 的状态更新。本地截图放 docs/verification/local（被忽略），不要覆盖原参考图。几何估值需用真实 DOM 校准。整个 UI 完成后再次验证本地包、重启、停用与恢复，再决定公开发布和其他版本支持。
+`scripts/` 下有三个**不随包发布**的验证工具，用于真实 Desktop 校准：
 
-待处理事项见 [TECH_DEBT.md](TECH_DEBT.md)。
+- `desktop-probe.mjs`：通过渲染进程的 CDP 端点执行表达式、截图、抓取 DOM 结构与控制台；
+- `desktop-responsive.mjs`：在一次连接内按多组窗口尺寸渲染、量测并截图；
+- `desktop-preview.mjs`：把源码样式表临时注入真实渲染进程，用于插件尚未安装时的视觉校准，`clear` 或刷新即撤销；
+- `web-harness.mjs` / `dom-outline.mjs`：在工作区内的沙箱 DSH profile 上做快速迭代。
+
+新增功能后请更新本文件与 [验证记录](VERIFICATION.md)。待处理事项见 [TECH_DEBT.md](TECH_DEBT.md)。

@@ -1,0 +1,184 @@
+/*
+ * Conversation page: header chrome, transcript column and message surfaces.
+ *
+ * The transcript, its scroll behaviour, tool rendering and approval surfaces
+ * stay entirely DSH's; only width, type and surface colours change. Host
+ * classes are pinned in src/client/compat/host-dom.ts.
+ */
+html[data-dsh-ccd-style="true"] .ST7X_W_header {
+  background: var(--ccd-canvas);
+  color: var(--ccd-text);
+  /*
+   * One header row. DSH stacks a title row and, below it, its View tablist; the
+   * reference keeps every piece of header chrome on the title line. The two
+   * wrapper boxes dissolve (`display: contents`) instead of being re-parented,
+   * so the host's own children stay where React put them and only their order
+   * changes: title, Agent-preset chip, View switcher, utilities, corner.
+   */
+  display: flex;
+  align-items: center;
+  /* The host reserves the second row only while its tablist is a row of its
+     own; that row is gone, so its `min-height: 76px` goes with it. */
+  min-height: 0;
+  padding-bottom: 10px;
+}
+
+html[data-dsh-ccd-style="true"] .ST7X_W_headerBlank {
+  /* Blank Sessions keep the single-row height they had as a grid row. */
+  min-height: 40px;
+  padding-bottom: 0;
+}
+
+html[data-dsh-ccd-style="true"] .ST7X_W_headerSessionless {
+  min-height: 50px;
+}
+
+html[data-dsh-ccd-style="true"] .ST7X_W_titleRow,
+html[data-dsh-ccd-style="true"] .ST7X_W_titleCluster {
+  display: contents;
+}
+
+html[data-dsh-ccd-style="true"] .ST7X_W_crumbs {
+  /* The dissolved title row used to carry the frame's leading clearance
+     (`max(0px, --dsh-frame-leading-clearance - 20px)`) as its own
+     `padding-inline-start`; with the row gone, the first thing it held has to
+     carry it, or the title slides under the macOS window buttons whenever the
+     sidebar collapses (that variable jumps to 160px, 84px in fullscreen). */
+  padding-inline-start: max(0px, calc(var(--dsh-frame-leading-clearance, 0px) - 20px));
+}
+
+html[data-dsh-ccd-style="true"] .ST7X_W_headerActions {
+  order: 1;
+  /* The dissolved title cluster's 10px gap, kept between title and chip. */
+  margin-left: 10px;
+}
+
+html[data-dsh-ccd-style="true"] .ST7X_W_headerUtilities {
+  order: 3;
+}
+
+html[data-dsh-ccd-style="true"] .ST7X_W_headerCorner {
+  order: 4;
+}
+
+/*
+ * View switcher: the host's own `role="tablist"`, reshaped into the reference's
+ * segmented control. The selected segment is drawn by one thumb — the
+ * `::before` of the tablist — moved with the geometry published by
+ * `compat/view-switch.ts`; the buttons keep their roles, labels and handlers,
+ * and the host's own underline is dropped.
+ */
+html[data-dsh-ccd-style="true"] .ST7X_W_tabs {
+  order: 2;
+  position: relative;
+  /* Never squeezed: a narrow header truncates the title instead. */
+  flex: none;
+  display: inline-flex;
+  align-items: stretch;
+  gap: 0;
+  /* `margin-right: auto` is the header's flexible gap: the title, chip and
+     switcher stay grouped at the leading edge, as in the reference, and the
+     utilities keep the trailing edge they had before. */
+  margin: 0 auto 0 10px;
+  padding: 0;
+  border-radius: var(--ccd-radius-row);
+  background: var(--ccd-track);
+  -webkit-app-region: no-drag;
+}
+
+html[data-dsh-ccd-style="true"] .ST7X_W_tabs::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  box-sizing: border-box;
+  width: var(--ccd-view-w, 0px);
+  height: 100%;
+  transform: translateX(var(--ccd-view-x, 0px));
+  border: 1px solid var(--ccd-border-soft);
+  border-radius: var(--ccd-radius-row);
+  background: var(--ccd-card);
+  box-shadow: var(--ccd-shadow-segment);
+  pointer-events: none;
+  transition: transform 180ms var(--ds-ease-in-out, ease), width 180ms var(--ds-ease-in-out, ease);
+}
+
+html[data-dsh-ccd-style="true"] .ST7X_W_tab {
+  position: relative;
+  z-index: 1;
+  box-sizing: border-box;
+  height: var(--ccd-control-row-height);
+  padding: 0 14px;
+  border: 0;
+  border-radius: var(--ccd-radius-row);
+  background: transparent;
+  color: var(--ccd-text-muted);
+  font-size: var(--ccd-font-size-muted);
+  font-weight: 500;
+  line-height: var(--ccd-control-row-height);
+  white-space: nowrap;
+}
+
+html[data-dsh-ccd-style="true"] .ST7X_W_tab::after {
+  display: none;
+}
+
+html[data-dsh-ccd-style="true"] .ST7X_W_tabActive {
+  color: var(--ccd-text);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html[data-dsh-ccd-style="true"] .ST7X_W_tabs::before {
+    transition: none;
+  }
+}
+
+html[data-dsh-ccd-style="true"] .ST7X_W_crumbs,
+html[data-dsh-ccd-style="true"] .ST7X_W_crumb {
+  color: var(--ccd-text);
+  font-size: var(--ccd-font-size-muted);
+}
+
+html[data-dsh-ccd-style="true"] .ST7X_W_headerActions button,
+html[data-dsh-ccd-style="true"] .ST7X_W_headerUtilities button {
+  color: var(--ccd-text-secondary);
+}
+
+/* Transcript column keeps the reference's breathing room. */
+html[data-dsh-ccd-style="true"] .icaHSq_scroll {
+  padding-top: 16px;
+  padding-bottom: 8px;
+}
+
+html[data-dsh-ccd-style="true"] .gKv1-q_root {
+  font-size: var(--dsh-content-font-size, 14px);
+  line-height: 24px;
+  color: var(--ccd-text);
+}
+
+html[data-dsh-ccd-style="true"] .icaHSq_column {
+  --dsh-chat-flow-gap: 10px;
+}
+
+/* User message: soft raised bubble, as in the reference. */
+html[data-dsh-ccd-style="true"] .IzP3Va_bubble {
+  padding: 7px 14px;
+  border-radius: var(--ccd-composer-radius);
+  background: var(--ccd-raised);
+  color: var(--ccd-text);
+  font-size: var(--dsh-content-font-size, 14px);
+  line-height: 22px;
+}
+
+html[data-dsh-ccd-style="true"] .IzP3Va_userStack {
+  max-width: min(calc(var(--dsh-chat-content-width) * 0.72), 82%);
+  gap: 6px;
+}
+
+/* Tool and reasoning rows: quiet single lines. */
+html[data-dsh-ccd-style="true"] .Q2dzhW_root,
+html[data-dsh-ccd-style="true"] .HiSsxa_root,
+html[data-dsh-ccd-style="true"] .-gRAhq_root {
+  color: var(--ccd-text-secondary);
+  font-size: var(--ccd-font-size-body);
+}

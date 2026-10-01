@@ -19,7 +19,11 @@ for (const [name, version] of Object.entries(pkg.devDependencies)) {
 const browser = await readFile(join(root, 'lib/client.js'), 'utf8');
 let registration;
 const sandbox = {
-  window: { __ModuleLoader__: { load(row) { assert.equal(registration, undefined); registration = row; } } },
+  window: {
+    __ModuleLoader__: { load(row) { assert.equal(registration, undefined); registration = row; } },
+    addEventListener() {},
+    removeEventListener() {},
+  },
   console,
 };
 runInNewContext(browser, sandbox);
@@ -33,37 +37,88 @@ assert.deepEqual(Object.keys(client).sort(), ['apply', 'inject']);
 assert.equal(typeof client.apply, 'function');
 client.apply(new Proxy({}, { get() { throw new Error('Disabled plugin accessed a Host service'); } }));
 // Exercise the actual bundled entry against a narrow DOM/service fixture.
-// This proves activation ownership, not the Desktop renderer or settings UI.
+// This proves activation ownership and the settings-transport contract, not the
+// Desktop renderer or its settings UI.
 const attributes = new Map();
 const styles = new Set();
+/* Observer bookkeeping: every observer a compat module opens must be closed. */
+let observersOpened = 0;
+let observersClosed = 0;
+class FakeObserver {
+  constructor() { observersOpened += 1; }
+  observe() {}
+  disconnect() { observersClosed += 1; }
+}
+sandbox.MutationObserver = FakeObserver;
+sandbox.ResizeObserver = FakeObserver;
+sandbox.requestAnimationFrame = callback => setTimeout(callback, 0);
+sandbox.cancelAnimationFrame = handle => clearTimeout(handle);
+sandbox.getComputedStyle = () => ({ position: 'static', gridTemplateColumns: '' });
 sandbox.document = {
   documentElement: {
     getAttribute: key => attributes.get(key) ?? null,
     setAttribute: (key, value) => attributes.set(key, value),
     removeAttribute: key => attributes.delete(key),
   },
+  body: {},
+  querySelector: () => null,
+  querySelectorAll: () => [],
   createElement: () => {
     const style = { dataset: {}, textContent: '', remove: () => styles.delete(style) };
     return style;
   },
   head: { appendChild: style => styles.add(style) },
 };
+/** Minimal settings transport: one section, one subscriber list. */
+function createConfigForms(initial) {
+  let value = initial;
+  const listeners = new Set();
+  return {
+    published: next => { value = next; for (const listener of [...listeners]) listener(); },
+    get(namespace) {
+      assert.equal(namespace, 'ui-skin-ccd-style');
+      return {
+        getSnapshot: () => ({ status: 'ready', value, writable: true }),
+        subscribe(listener) { listeners.add(listener); return () => listeners.delete(listener); },
+        set(field, next) { value = { ...value, [field]: next }; return true; },
+      };
+    },
+  };
+}
 let teardown;
 let paletteLayers = 0;
+const disabled = { enabled: false, features: Object.fromEntries(FEATURE_IDS.map(id => [id, false])) };
+const configForms = createConfigForms(disabled);
 client.apply({
-  slots: { inject() {}, register() { throw new Error('Planned feature replaced a slot'); } },
+  slots: { inject() {}, register() { throw new Error('Slot registration was not expected here'); } },
   theme: { overrideTokens() { paletteLayers++; return () => { paletteLayers--; }; } },
   uiWorkspace: { startSession() {} },
+  configForms,
   effect: execute => { teardown = execute(); },
-}, { enabled: true, features: Object.fromEntries(FEATURE_IDS.map(id => [id, false])) });
+});
+assert.equal(attributes.has('data-dsh-ccd-style'), false, 'a disabled section must not touch the document');
+assert.equal(styles.size, 0);
+// Re-enabling through the settings transport activates without a reload.
+configForms.published({ ...disabled, enabled: true });
 assert.equal(attributes.get('data-dsh-ccd-style'), 'true');
-assert.equal(styles.size, 1);
+// Design variables and the shared composer geometry every feature reuses.
+assert.equal(styles.size, 2);
+assert.equal(paletteLayers, 1);
+// Disabling again releases every owned resource.
+configForms.published(disabled);
+assert.equal(attributes.has('data-dsh-ccd-style'), false);
+assert.equal(styles.size, 0);
+assert.equal(paletteLayers, 0);
+configForms.published({ ...disabled, enabled: true });
 assert.equal(typeof teardown, 'function');
 teardown();
 teardown();
 assert.equal(attributes.has('data-dsh-ccd-style'), false);
 assert.equal(styles.size, 0);
 assert.equal(paletteLayers, 0);
+/* The compat observers are resources like any other: none may outlive teardown. */
+assert.ok(observersOpened > 0, 'the compat layer must observe the host DOM');
+assert.equal(observersClosed, observersOpened);
 const host = await import(pathToFileURL(join(root, 'lib/index.js')).href);
 assert.equal(typeof host.apply, 'function');
 assert.ok(host.Config);
@@ -74,9 +129,9 @@ const result = spawnSync('npm', ['pack', '--dry-run', '--ignore-scripts', '--jso
 if (result.error) throw result.error;
 assert.equal(result.status, 0, result.stderr);
 const packed = JSON.parse(result.stdout)[0].files.map(file => file.path);
-for (const file of ['lib/index.js', 'lib/client.js', 'lib/types/host/index.d.ts', 'cordis.patch.yml', 'README.md']) {
+for (const file of ['lib/index.js', 'lib/client.js', 'lib/types/host/index.d.ts', 'cordis.patch.yml', 'README.md', 'LICENSE']) {
   assert.ok(packed.includes(file), `Missing package file: ${file}`);
 }
-assert.ok(packed.every(file => /^(lib\/|cordis\.patch\.yml$|README\.md$|package\.json$)/.test(file)),
+assert.ok(packed.every(file => /^(lib\/|cordis\.patch\.yml$|README\.md$|LICENSE$|package\.json$)/.test(file)),
   'Unexpected source, screenshot, cache, or development asset in package');
 console.log(`DSH loader envelope, activation cleanup fixture, Host entry, and ${packed.length} package files passed.`);

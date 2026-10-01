@@ -1,16 +1,77 @@
-/* Provisional @2x screenshot measurements; calibrate with real DOM coordinates. */
-/* Variables only: the scaffold deliberately adds no rules changing native layout. */
+/*
+ * CCD design variables. Values were measured from the reference screenshots in
+ * docs/reference at @2x and are expressed in logical px at the 1374x871
+ * reference window. This is the only stylesheet allowed to carry literal
+ * colours; every other rule consumes these variables.
+ */
 html[data-dsh-ccd-style="true"] {
+  /* Geometry */
   --ccd-sidebar-width: 264px;
-  --ccd-content-max-width: 769px;
-  --ccd-composer-min-height: 43px;
-  --ccd-composer-bottom-gap: 33px;
+  --ccd-sidebar-inline-padding: 10px;
+  --ccd-sidebar-bottom-padding: 8px;
+  --ccd-row-height: 28px;
+  --ccd-nav-row-height: 30px;
+  --ccd-nav-gap: 2px;
+  --ccd-radius-row: 8px;
+  --ccd-radius-panel: 12px;
+  --ccd-composer-width: 770px;
+  --ccd-composer-min-height: 42px;
+  --ccd-composer-radius: 10px;
+  --ccd-composer-padding: 8px 14px;
+  --ccd-composer-padding-block: 8px;
+  --ccd-composer-padding-inline: 14px;
+  --ccd-composer-row-gap: 4px;
+  --ccd-composer-row-inset: 4px;
+  --ccd-composer-bottom-gap: 5px;
+  --ccd-control-row-height: 28px;
+  --ccd-send-size: 24px;
+  --ccd-send-reserve: 30px;
+  --ccd-dock-gap: 10px;
+  --ccd-account-menu-width: 236px;
+  --ccd-account-menu-padding: 5px;
+  --ccd-account-row-height: 28px;
+  --ccd-account-trigger-height: 30px;
+
+  /* Surfaces */
   --ccd-canvas: #fcfcfb;
-  --ccd-sidebar: #fafaf8;
-  --ccd-text: #20201e;
-  --ccd-text-muted: #8c8c87;
-  --ccd-border: #e5e5e1;
-  --ccd-selected: #eeedea;
-  --ccd-font-ui: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-  --ccd-font-code: ui-monospace, SFMono-Regular, Menlo, monospace;
+  --ccd-sidebar: #fbfbfa;
+  --ccd-card: #ffffff;
+  /* Segmented-control track. The reference measures #f6f6f4 against a white
+     page; the same step down from this canvas keeps the same contrast. */
+  --ccd-track: #f3f3f2;
+  --ccd-raised: #f0f0ef;
+  --ccd-hover: #f0f0ee;
+  --ccd-selected: #ecebe8;
+
+  /* Lines */
+  --ccd-border: #e3e3e1;
+  --ccd-border-strong: #e0e0df;
+  --ccd-border-soft: #ebebe9;
+
+  /* Text */
+  --ccd-text: #1f1f1d;
+  --ccd-text-secondary: #6f6f6a;
+  --ccd-text-muted: #8f8f8a;
+  --ccd-text-placeholder: #89877f;
+
+  /* State colours that DSH already owns semantics for. */
+  --ccd-diff-added: #508c48;
+  --ccd-diff-removed: #b33156;
+
+  /* Type */
+  --ccd-font-ui: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Helvetica Neue",
+    "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", sans-serif;
+  --ccd-font-code: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace;
+  --ccd-font-size-body: 14px;
+  --ccd-font-size-muted: 13px;
+  --ccd-font-size-headline: 26px;
+
+  /* The return glyph the Composer's send control draws. A mask, not a colour:
+     it is painted with the button's own `currentColor`, and drawing it as a
+     shape keeps it centred in the control instead of riding a font baseline. */
+  --ccd-icon-return: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16' fill='none' stroke='black' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M12.5 3.5V10H3'/%3E%3Cpath d='M6 7L3 10l3 3'/%3E%3C/svg%3E");
+
+  /* Elevation */
+  --ccd-shadow-card: 0 1px 2px rgb(0 0 0 / 4%);
+  --ccd-shadow-segment: 0 1px 2px rgb(0 0 0 / 8%);
 }

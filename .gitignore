@@ -5,4 +5,10 @@ artifacts/
 coverage/
 .DS_Store
 *.tsbuildinfo
+
+# Local-only acceptance material: the reference screenshots include a third
+# party's product UI and a signed-in account, and the verification captures
+# include real session content. Neither is published.
+docs/reference/
 docs/verification/local/
+.verify/

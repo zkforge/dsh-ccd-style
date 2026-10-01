@@ -1,0 +1,37 @@
+/*
+ * Shell: window frame, column geometry and canvas surfaces.
+ *
+ * Host classes are pinned in src/client/compat/host-dom.ts. The rules here
+ * replace the macOS blue-violet sidebar wash with the flat CCD surfaces and keep
+ * the column divider on the sidebar's own edge: the frame's tracks belong to
+ * `ui-layout`, and this plugin never shifts a column away from the track it was
+ * given, so dragging the handle keeps moving the line the pointer is on.
+ */
+html[data-dsh-ccd-style="true"] body {
+  font-family: var(--ccd-font-ui);
+  color: var(--ccd-text);
+  -webkit-font-smoothing: antialiased;
+}
+
+/* Flat, neutral sidebar column: no gradient, no blue cast. */
+html[data-dsh-ccd-style="true"][data-platform="darwin"] ._6Qf49G_sidebarCol,
+html[data-dsh-ccd-style="true"] ._6Qf49G_sidebarCol {
+  background: var(--ccd-sidebar);
+  border-right: 1px solid var(--ccd-border);
+}
+
+html[data-dsh-ccd-style="true"][data-platform="darwin"] ._6Qf49G_centerCol,
+html[data-dsh-ccd-style="true"] ._6Qf49G_centerCol {
+  background: var(--ccd-canvas);
+  /* The divider is the sidebar's right edge; the native left edge would double it. */
+  border-left: 0;
+}
+
+html[data-dsh-ccd-style="true"] ._6Qf49G_rightbarCol {
+  background: var(--ccd-canvas);
+}
+
+/* The frame paints the window background behind the rounded macOS corners. */
+html[data-dsh-ccd-style="true"] ._6Qf49G_frame {
+  background: var(--ccd-sidebar);
+}

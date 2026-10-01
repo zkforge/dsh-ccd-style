@@ -1,5 +1,22 @@
-import type { PlannedFeature } from '../../contracts/feature.ts';
+import type { ImplementedFeature } from '../../contracts/feature.ts';
+import { probeHost } from '../../compat/host-dom.ts';
+import shellCss from './shell.css';
 
-export const shellFeature: PlannedFeature = {
-  id: 'shell', status: 'planned', task: 'docs/IMPLEMENTATION.md#shell',
+/**
+ * Window frame and column geometry: flat surfaces, the sidebar column and its
+ * divider. The three tracks stay entirely `ui-layout`'s solve, so resizing the
+ * sidebar with the handle moves the divider the pointer is on; the plugin only
+ * paints the columns.
+ */
+export const shellFeature: ImplementedFeature = {
+  id: 'shell',
+  status: 'implemented',
+  task: 'docs/IMPLEMENTATION.md#shell',
+  mount(environment, scope) {
+    if (!probeHost(document).frame) {
+      environment.logger.debug('shell: frame anchor missing; native frame retained');
+      return;
+    }
+    scope.add(environment.dom.mountStyles(shellCss));
+  },
 };

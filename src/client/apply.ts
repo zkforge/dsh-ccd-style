@@ -1,9 +1,11 @@
 import type { Context } from '@deepseek-ai/cordis';
-import type { StyleOptions } from '../shared/config.ts';
+import type { FeatureEnvironment } from './contracts/feature.ts';
 import type { Logger } from './contracts/ports.ts';
-import { resolveConfig } from '../shared/config.ts';
-import { PLUGIN_ID } from '../shared/identity.ts';
+import { adoptConfig } from '../shared/config.ts';
+import { ENTRY_ID, PLUGIN_ID } from '../shared/identity.ts';
 import { createHostServices } from './compat/adapter.ts';
+import { mountComposerMenuPlacement } from './compat/composer-menus.ts';
+import { mountComposerStats } from './compat/stats-values.ts';
 import { createDomPort } from './compat/dom.ts';
 import { CleanupScope } from './core/cleanup.ts';
 import { mountFeatures } from './core/mount-features.ts';
@@ -16,31 +18,84 @@ import { toolCallsFeature } from './features/tool-calls/index.ts';
 import { statisticsFeature } from './features/statistics/index.ts';
 
 /** Cordis services, not manifest package-name edges, control activation. */
-export const inject = ['slots', 'theme', 'uiWorkspace'];
+export const inject = ['slots', 'theme', 'uiWorkspace', 'configForms'];
 
-/** The only assembly point allowed to import multiple feature domains. */
-export function apply(ctx: Context, options: StyleOptions = {}): void {
-  const config = resolveConfig(options);
-  if (!config.enabled || typeof document === 'undefined') return;
-  const logger: Logger = {
-    debug: message => { if (config.debug) console.debug(`[${PLUGIN_ID}] ${message}`); },
-    error: (message, error) => console.error(`[${PLUGIN_ID}] ${message}`, error),
-  };
-  const environment = {
-    config, logger, host: createHostServices(ctx), dom: createDomPort(document),
-  };
+/**
+ * The only assembly point allowed to import multiple feature domains.
+ *
+ * The loader creates client entries without configuration, so this plugin reads
+ * its own Host-served section through the settings transport rather than a
+ * second `apply` argument: `configForms.get(entryId)`. That keeps one source of
+ * truth for the switch and lets enable/disable take effect without a reload.
+ *
+ * @param ctx - client root context carrying the injected services.
+ */
+export function apply(ctx: Context): void {
+  if (typeof document === 'undefined') return;
   ctx.effect(() => {
-    const scope = new CleanupScope(error => logger.error('cleanup failed', error));
-    try {
-      mountTheme(environment, scope);
-      mountFeatures([
-        shellFeature, sidebarFeature, newSessionFeature,
-        conversationFeature, toolCallsFeature, statisticsFeature,
-      ], environment, scope);
-    } catch (error) {
-      scope.dispose();
-      throw error;
-    }
-    return () => scope.dispose();
+    const host = createHostServices(ctx);
+    const form = host.configForms.get(ENTRY_ID);
+    const dom = createDomPort(document);
+    let environment: FeatureEnvironment = {
+      config: adoptConfig(undefined),
+      logger: { debug: () => {}, error: () => {} },
+      host,
+      dom,
+    };
+    const logger: Logger = {
+      debug: message => { if (environment.config.debug) console.debug(`[${PLUGIN_ID}] ${message}`); },
+      error: (message, error) => console.error(`[${PLUGIN_ID}] ${message}`, error),
+    };
+    let active: CleanupScope | null = null;
+    let released = false;
+    let applied: string | null = null;
+
+    const sync = () => {
+      if (released) return;
+      const next = adoptConfig(form.getSnapshot().value);
+      const signature = JSON.stringify(next);
+      if (signature === applied) return;
+      applied = signature;
+      environment = { ...environment, config: next, logger };
+      active?.dispose();
+      active = null;
+      if (!next.enabled) {
+        logger.debug('disabled; native interface retained');
+        return;
+      }
+      const scope = new CleanupScope(error => logger.error('cleanup failed', error));
+      try {
+        mountTheme(environment, scope);
+        /* Composer menus are placed from the assembly layer: the rule spans both
+           pages that render the Composer, and the theme layer may not reach the
+           compatibility layer. */
+        scope.add(mountComposerMenuPlacement(
+          document,
+          error => logger.error('composer: menu placement observer failed', error),
+        ));
+        scope.add(mountComposerStats(
+          document,
+          error => logger.error('composer: statistics readout observer failed', error),
+        ));
+        mountFeatures([
+          shellFeature, sidebarFeature, newSessionFeature,
+          conversationFeature, toolCallsFeature, statisticsFeature,
+        ], environment, scope);
+      } catch (error) {
+        scope.dispose();
+        logger.error('activation failed; native interface retained', error);
+        return;
+      }
+      active = scope;
+    };
+
+    const off = form.subscribe(sync);
+    sync();
+    return () => {
+      released = true;
+      off();
+      active?.dispose();
+      active = null;
+    };
   }, PLUGIN_ID);
 }
