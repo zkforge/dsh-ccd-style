@@ -1,0 +1,16 @@
+/* Provisional @2x screenshot measurements; calibrate with real DOM coordinates. */
+/* Variables only: the scaffold deliberately adds no rules changing native layout. */
+html[data-dsh-ccd-style="true"] {
+  --ccd-sidebar-width: 264px;
+  --ccd-content-max-width: 769px;
+  --ccd-composer-min-height: 43px;
+  --ccd-composer-bottom-gap: 33px;
+  --ccd-canvas: #fcfcfb;
+  --ccd-sidebar: #fafaf8;
+  --ccd-text: #20201e;
+  --ccd-text-muted: #8c8c87;
+  --ccd-border: #e5e5e1;
+  --ccd-selected: #eeedea;
+  --ccd-font-ui: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  --ccd-font-code: ui-monospace, SFMono-Regular, Menlo, monospace;
+}

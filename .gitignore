@@ -1,0 +1,8 @@
+node_modules/
+lib/
+artifacts/
+.cache/
+coverage/
+.DS_Store
+*.tsbuildinfo
+docs/verification/local/
