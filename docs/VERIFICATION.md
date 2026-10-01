@@ -2,6 +2,22 @@
 
 更新日期：2026-10-01。只记录实际运行结果。**源码检查、测试夹具与真实 Desktop 验证分开记录**，前者不能替代后者。
 
+## README 与 Agent 安装文档轮（2026-10-01）
+
+交付：[中英双语 README](../README.md)、[install.md](../install.md)。README 增加语言导航、兼容徽章、功能与配置表、agent 安装指令；安装指南包含环境预检、配置备份、唯一 tarball 路径、启用合并规则、验收与回退。`check:architecture` 已将 `install.md` 纳入文档链接与空白检查。
+
+| 验证 | 实际结果 |
+| --- | --- |
+| 本机正式 CLI | `dsh --help` / `dsh --version` 核对安装入口与版本，返回 `0.2.0-rc.2` |
+| 文档与命令语法 | `npm run check:architecture`、`git diff --check` 通过；README 与 install.md 的 9 个 shell 代码块全部通过 `bash -n` |
+| 安装命令隔离夹具 | 临时目录中模拟 npm 与 DSH CLI；备份保留原配置、含空格路径、两次安装生成不同绝对 tarball 路径、打包失败与错误 DSH 版本时不调用安装均通过 |
+| 完整本地检查 | `npm run check` 的类型、架构、5 项测试与构建通过；`check:package` 失败：既有 `@deepseek-ai/dsh-client-ui-primitives` 依赖声明为 `^0.2.0-rc.2`，检查要求精确 `0.2.0-rc.2` |
+| 本轮真实 Desktop 安装／启用 | 未执行；本轮为文档更新，隔离夹具不代表真实安装验收 |
+
+边界：保留工作区已有／并行中的依赖与业务源码改动，未为通过检查而改写依赖版本。以上本地检查记录对应命令执行时的工作区；本轮未生成新的可交付安装包，也未改动用户 desktop profile。下文为此前的真实 Desktop 验证记录。
+
+## 已有 Desktop 验证基线
+
 应用版本：DeepSeek Harness Desktop `0.2.0-rc.2`（Electron 44.0.0，macOS arm64），窗口 1280×820 逻辑像素；对照截图在 CDP 设备指标覆盖下按参考窗口 1374×871 渲染。
 
 | 层次 | 验证方式 | 当前状态 |

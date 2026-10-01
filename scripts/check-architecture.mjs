@@ -108,7 +108,7 @@ for (const file of await list(resolve(root, 'src'))) {
   }
 }
 
-for (const doc of ['README.md', 'AGENTS.md', 'ARCHITECTURE.md', 'PLAN.md',
+for (const doc of ['README.md', 'install.md', 'AGENTS.md', 'ARCHITECTURE.md', 'PLAN.md',
   'docs/IMPLEMENTATION.md', 'docs/VERIFICATION.md', 'docs/DSH_COMPATIBILITY.md', 'docs/TECH_DEBT.md']) {
   const source = await readFile(resolve(root, doc), 'utf8');
   if (/[ \t]+$/m.test(source)) problems.push(`${doc}: trailing whitespace`);
