@@ -208,9 +208,7 @@ hero 区的真实结构（据 `src/client/features/new-session/new-session.css` 
 
 构图（用户确认后已从"问候块垂直居中"改为"问候块靠近顶部＋左对齐"，`--ccd-hero-top: 16px`）：实测问候块顶部 56px（视口 6%）、卡片 114–439px、Composer 座位 760px 起（87%），与参考截图的 6%／15–53%／87% 一致，卡片不再压到 Composer。**横向是左对齐而不是居中**：参考里标题、卡片与 Composer 输入卡共用同一条左边缘，实测标题 446、卡片 446、输入卡 443（宿主的标题栈自带 3px 偏移），`left` 取 `50% - Composer 卡宽 / 2`，宿主 headline 的 `justify-content: center` 被覆盖为 `flex-start`。验收截图在 `docs/verification/local/stats-card/`（该目录按惯例不进 Git）。
 
-剩下的只有数据：
-
-1. **数据仍是样例值**：卡片显示的是参考截图里的数字，因此 `features.statistics` 保持默认关闭。接入 host 半的聚合后，把 `SAMPLE_STATS` 换成真实快照即可，卡片本身不需要改。
+当时剩下的只有数据，`SAMPLE_STATS` 是参考截图里的数字；第十一节记录了当天接上的真实聚合与实测结果——卡片本身（几何、结构、颜色）没有改动。
 
 ## 十一、真实数据已接入（2026-10-03）
 

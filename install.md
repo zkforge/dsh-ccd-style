@@ -169,7 +169,7 @@ SH
 - 条目不存在时追加上述覆盖条目；文件不存在时以该列表新建。
 - 用 YAML 解析／编辑工具保留其他 patch、条目顺序和注释；读取或解析失败时停止写入，不以示例覆盖整份文件。
 - 若该条目被显式 `disabled: true`，一并设为 `disabled: false`；这是 loader 停用状态，与 `config.enabled` 是两个独立开关。
-- `features.tool-calls` 与 `features.statistics` 尚未实现，保持关闭。四个核心 feature 默认开启；若用户此前关闭了某个模块，保留其选择。
+- `features.tool-calls` 尚未实现，保持关闭；`features.statistics` 已实现（Host 聚合 + 鉴权路由），但默认关闭——需要时把它设为 `true`，聚合随插件启用常驻，卡片只在打开该开关后显示。四个核心 feature 默认开启；若用户此前关闭了某个模块，保留其选择。
 - `appearance` 与 `fonts` 各是一个整体小节：要保留用户已选的颜色或字体，合并时把这两节一并重述，不要只写其中一个字段。
 
 这段列表用于**覆盖 bundle 已插入的条目**，无需再次写 `insert:`。保存后重新加载界面；如果配置没有被当前进程采纳，正常重启 DSH 再验证。
