@@ -1,5 +1,7 @@
 import type { Context } from '@deepseek-ai/cordis';
-import type { ConfigFormPort, ConfigFormsPort, HostServices } from '../contracts/ports.ts';
+import type {
+  ConfigFormPort, ConfigFormsPort, HostServices, ThemePreferencePort,
+} from '../contracts/ports.ts';
 import { TARGET_DSH_VERSION } from '../../shared/identity.ts';
 
 /**
@@ -24,6 +26,32 @@ function resolveConfigForms(ctx: Context): ConfigFormsPort {
   };
 }
 
+/**
+ * Build the theme service's preference face.
+ *
+ * `getTheme`／`setTheme` are the service's only read and write entries and
+ * `theme/change` is its only change signal (see `ThemeRuntime`), so the plugin's
+ * Appearance control is another surface for the native preference rather than a
+ * second switch of its own. A build that does not publish them yields null and
+ * the page keeps its other rows; activation is not failed over an optional
+ * control.
+ * @param ctx - client context carrying the theme service and its event bus.
+ * @returns the port, or null when this build cannot read or write the preference.
+ */
+export function createThemePreferencePort(ctx: Context): ThemePreferencePort | null {
+  const theme = ctx.theme;
+  if (typeof theme?.getTheme !== 'function' || typeof theme.setTheme !== 'function'
+    || typeof ctx.on !== 'function') return null;
+  return {
+    preference: () => theme.getTheme().preference,
+    set: preference => theme.setTheme(preference),
+    subscribe(listener) {
+      const off = ctx.on('theme/change', () => listener());
+      return () => { off(); };
+    },
+  };
+}
+
 /** This compatibility boundary targets the pinned SDK, not arbitrary DSH versions. */
 export function createHostServices(ctx: Context): HostServices {
   const slots = ctx.slots;
@@ -37,6 +65,7 @@ export function createHostServices(ctx: Context): HostServices {
   return {
     slots,
     theme,
+    themePreference: createThemePreferencePort(ctx),
     configForms: resolveConfigForms(ctx),
     workspace: {
       openSession: target => workspace.openSession(target),

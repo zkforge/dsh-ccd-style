@@ -2,10 +2,14 @@
  * Row configuration page.
  *
  * The page is drawn on the host's own settings surface and stays readable in
- * both plugin states, so it consumes host `--dsw-*` tokens only: while the
- * plugin is enabled the theme layer has already pointed the surfaces and fonts
- * that matter at the configured values, and while it is disabled the page still
- * renders (that is how the interface is switched back on).
+ * both plugin states, so it consumes host `--dsw-*` tokens: while the plugin is
+ * enabled the theme layer has already pointed the surfaces and fonts that matter
+ * at the configured values, and while it is disabled the page still renders
+ * (that is how the interface is switched back on). The one exception is the
+ * segmented theme control below, whose recessed track and raised segment have a
+ * relationship the host's dark palette does not carry: it reads `--ccd-*` with a
+ * host fallback, so it follows both plugin palettes while enabled and keeps
+ * working (on host tokens) while disabled.
  *
  * Layout is one column of cards capped at a readable measure: the Plugins panel
  * is wide, and a settings form stretched across it is hard to scan.
@@ -79,11 +83,57 @@
   font: var(--dsw-font-xxs-12);
 }
 
+/* The caption under a group of rows (today: the two colour rows). Rows carry
+   their own 8px padding, so the note only needs to close the group. */
+.ccd-settings-note {
+  margin: 0;
+  padding: 0 2px 6px;
+}
+
 .ccd-settings-control {
   display: flex;
   align-items: center;
   justify-content: flex-end;
   gap: 8px;
+}
+
+/* Segmented theme control: a recessed track with the chosen segment raised.
+   The reference measures 92x32 with 16px glyphs and a 1px inner card; the track
+   and the raised card come from the plugin palette when it is active (both
+   schemes define the relationship) and from the host palette otherwise. */
+.ccd-settings-segmented {
+  display: inline-flex;
+  align-items: center;
+  padding: 1px;
+  border-radius: 9px;
+  background: var(--ccd-track, var(--dsw-alias-interactive-bg-hover));
+}
+
+.ccd-settings-segment {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  box-sizing: border-box;
+  width: 30px;
+  height: 30px;
+  padding: 0;
+  border: 1px solid transparent;
+  border-radius: 8px;
+  background: none;
+  color: var(--dsw-alias-label-secondary);
+  cursor: pointer;
+  transition: color 120ms ease, background-color 120ms ease;
+}
+
+.ccd-settings-segment:hover {
+  color: var(--dsw-alias-label-primary);
+}
+
+.ccd-settings-segment[aria-checked='true'] {
+  border-color: var(--ccd-border-soft, var(--dsw-alias-border-l2));
+  background: var(--ccd-card, var(--dsw-alias-bg-layer-1));
+  color: var(--dsw-alias-label-primary);
+  box-shadow: var(--dsw-shadow-lv1);
 }
 
 /* Switch: the host's own dimensions and tokens (36×20 capsule, 16px thumb). */
@@ -141,6 +191,7 @@
 
 .ccd-settings-text:focus-visible,
 .ccd-settings-switch:focus-visible,
+.ccd-settings-segment:focus-visible,
 .ccd-settings-button:focus-visible,
 .ccd-settings-button-quiet:focus-visible,
 .ccd-settings-menu-search:focus-visible,

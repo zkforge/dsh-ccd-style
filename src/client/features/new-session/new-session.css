@@ -17,16 +17,18 @@ html[data-dsh-ccd-style="true"] .ST7X_W_root[data-phase="hero"] .ST7X_W_composer
 }
 
 /* Greeting: the host's own centred block, taken out of the Composer group and
-   put in the middle of the page. Its containing block is the conversation
-   body, so the percentages resolve against the content column; the host keeps
+   put near the top of the page the way the reference shows it — the statistics
+   card hangs below it, so a centred block would push the card into the
+   Composer on a short window. Its containing block is the conversation body,
+   so the percentages resolve against the content column; the host keeps
    centring the title inside the block. */
 html[data-dsh-ccd-style="true"] .ST7X_W_root[data-phase="hero"] .bocITq_root {
   position: absolute;
-  inset: 50% auto auto 50%;
+  inset: var(--ccd-hero-top) auto auto 50%;
   width: min(calc(var(--dsh-composer-card-max-width, 770px) + 32px), calc(100% - 32px));
   height: auto;
   padding: 0 16px;
-  translate: -50% -50%;
+  translate: -50% 0;
 }
 
 /* Only the brand mark, the title type and the preview badge are restyled. */
@@ -35,11 +37,19 @@ html[data-dsh-ccd-style="true"] .ST7X_W_root[data-phase="hero"] .bocITq_fish {
   height: 20px;
 }
 
+/* The reference left-aligns the greeting: the title, the statistics card below
+   it and the Composer card all start at the same left edge. The host centres
+   the headline inside a 770px stack, so the stack itself is already in place
+   and only the headline's own centring has to go. */
+html[data-dsh-ccd-style="true"] .ST7X_W_root[data-phase="hero"] .bocITq_headline {
+  justify-content: flex-start;
+}
+
 html[data-dsh-ccd-style="true"] .ST7X_W_root[data-phase="hero"] .bocITq_titleGroup {
   color: var(--ccd-text);
   font-size: var(--ccd-font-size-headline);
   font-weight: 400;
-  line-height: 32px;
+  line-height: 26px;
   letter-spacing: -0.01em;
 }
 

@@ -1,6 +1,123 @@
 # 验证记录
 
-更新日期：2026-10-02。本文件保留当前验证结论与证据位置，源码检查、夹具和真实运行分开记录。已被后续修复取代的详细记录保存在 Git 提交 `ec55195` 中，可执行 `git show ec55195:docs/VERIFICATION.md` 查看。
+更新日期：2026-10-03。本文件保留当前验证结论与证据位置，源码检查、夹具和真实运行分开记录。已被后续修复取代的详细记录保存在 Git 提交 `ec55195` 中，可执行 `git show ec55195:docs/VERIFICATION.md` 查看。
+
+## 四列以上的表格超出 Composer 宽度（2026-10-03，已修）
+
+用户截图（2515×1667，按 1.79 设备像素/逻辑像素反算＝1293×833 逻辑窗口、默认 280px 侧栏）反映：拖动侧边栏时正文跟着缩、拖回后表格右缘超出居中的 Composer。逐列像素量与真实运行都指向**宿主自己的宽表格加宽**，与拖动无关。
+
+机制（DSH `0.2.0-rc.2`，`app.asar` 内两个模块）：渲染器（`dsh-client-ui-primitives`）给**四列及以上**的 Markdown 表格加 `md-table-wide`（`ui-chat` 的 `AssistantMarkdown.module.css`）：
+
+```css
+.gKv1-q_body .md-table-wide {
+  --dsh-table-spare: max(0px, calc((100cqw - var(--dsh-chat-content-width)) / 2));
+  --dsh-table-lead: calc(var(--dsh-table-spare) + min(var(--dsh-chat-content-width), 100cqw) - 100%);
+  width: calc(100% + var(--dsh-table-lead) + var(--dsh-table-spare));
+  max-width: none; margin-left: calc(-1 * var(--dsh-table-lead)); padding-left: var(--dsh-table-lead);
+}
+```
+
+包装层因此被撑到滚动视口的整个内容宽度，左边用负外边距＋等量左内边距把表格左缘钉回正文列。宿主本意是让「内容确实装不下」的宽表格借用左右余量（原生下表格是 `width: max-content`，短表不会借用）。插件把表格改成 `width: 100%`（与宿主 `.tableScroll table{width:max-content}` 冲突且特异度更高），于是**每一张四列以上的表格都被撑满加宽后的包装层**。
+
+修法（`features/conversation/conversation.css`，只加一条守卫规则，不动宿主的 `overflow-x` 与滚动条槽）：把该包装层收回正文列——`width: 100%`、`max-width: 100%`、`margin-left: 0`、`padding-left: 0`。表格于是与正文列同宽、和 Composer 左右缘对齐；列的下限都放不进的表格仍用宿主自己的 `md-table-wide` 悬停横向滚动。
+
+隔离 `.cache/verify/home-web` 官方 Web 客户端（`dsh web`，插件经 `file:` 挂载仓库，DSH `0.2.0-rc.2`，Playwright Chromium 1293×833 @2x，脚本 `.verify/table-wide-bleed.mjs`，**0 pageerror**）用宿主原版 `MarkdownText` 渲染三张表（短四列表、用户截图那张长四列表、8 列表），只改侧栏轨道宽度；同一构建用 `--legacy` 把宿主的加宽逐字节加回页面作为对照：
+
+| 侧栏 | 100cqw | 正文列＝Composer | 短四列／长四列（修前） | 短四列／长四列（修后） | 8 列（修前／修后） |
+| --- | --- | --- | --- | --- | --- |
+| 240 | 982 | 770 | 876（+106） | **770（±0）** | 962（+192） |
+| 280（默认，＝用户截图） | 942 | 770 | 856（+86） | **770（±0）** | 962（+192） |
+| 380 | 842 | 770 | 806（+36） | **770（±0）** | 962（+192） |
+| 520 | 702 | 702 | 702（−16） | 702（−16） | 962（+244） |
+| 拖回 280 | 942 | 770 | 856（+86） | **770（±0）** | 962（+192） |
+
+括号内是「表格右缘超出 Composer 右缘」的像素数。修前表格宽 = 770 + `spare`（`spare = (100cqw − 770) / 2`），短表与长表完全相同，说明宽度来自 `width: 100%` 而不是内容；修后两张四列表恒为 770，与 Composer 逐项对齐，五种侧栏宽度下都是 0 超出。8 列表在任何状态下都放不进 770（宿主每格 `min-width: 100px`，8×120＝960），修后它被包装层按列右缘裁住、`scrollWidth − clientWidth` 实测 **192px**，`overflow-x` 停在宿主的 `hidden → 悬停 scroll`（悬停实测 `scroll`，滚动可达），与原生同一套兜底。拖回后几何逐项复现，**没有残留状态**（侧栏拖动只改 `100cqw`；宿主那套 `--dsh-chat-user-width`／`--dsh-conversation-column-width` 由 ResizeObserver 写内联样式，但插件的 `--dsh-chat-content-width: 770px` 固定在 `.ST7X_W_body` 上，实测为该值，宿主那条 `clamp(680px, 64%, 920px)` 不生效）。插件关闭的对照（两阶段一致）：正文列 680、Composer 712，短的四列表 **512**（不借用，右缘在 Composer 内 184px），长的四列表 913（`max-content`，超出 Composer **217px**），8 列 1040——即加宽本身是宿主行为，插件让它对每张四列表都发生。
+
+用户截图像素复核：表格 1532px／1.790 ＝ **856** 逻辑、Composer 1379px／1.790 ＝ **770**，与上表 280 侧栏一档（修前）逐项吻合（表格左缘与列左缘重合＝`lead` 左内边距）。
+
+本地检查：`npm test` 68 项、`npm run build`、`npm run check:package` 54 文件通过；`npm run check:architecture` 在本轮**工作区**上失败于并行改动（`README.md` 尾随空格与指向已被删除的 `assets/new-session-light.png` 的链接），与本次改动无关，未处理。改动是纯 CSS，按同尺寸截图验收，不新增重复断言。
+
+复验脚本 `.verify/table-wide-bleed.mjs`；证据 `output/playwright/table-wide-bleed/before|after/` 的 `report.json`、`baseline.png`、标注版 `baseline-annotated.png`（红＝Composer 右缘、蓝＝四列表右缘：修前 1168／1254，修后两条线重合）、`sidebar-240/380/520.png`、`restored.png`、`native-restored.png`、`overflow-hover.png`。边界：隔离 Web profile 的夹具，不是真实 Electron 窗口。本轮按用户决定**没有打包、也没有装入 Desktop profile**（工作区还有并行进行的字体／主题等改动），修复暂留在工作区；桌面端要看到效果需在改动落定后重新打包安装并 ⌘R。
+
+## 模型名与 effort 的选值墨色（2026-10-03）
+
+用户反馈模型菜单里的字「灰蒙蒙的，加粗也没用」，确认后要求改成纯黑、并把相应字重去掉。
+
+原因不是配色值而是级联：`theme/composer.css` 的 `html[data-dsh-ccd-style="true"] .yhfFVG_row button`（特异度 0-2-2）把工具行里每个按钮都刷成 `--ccd-text-secondary`，而模型控件与它的浮层恰好都是这一行的后代（浮层是 `.ccd-model-controls` 的 fixed 子元素），于是 `.ccd-model-trigger`（0-1-0）与 `.ccd-model-options button`（0-1-1）的 `color` 全部输给这条规则——菜单里的模型名和两个触发器因此都是次级灰，加粗只改字重、改不了颜色。改动前的探针实测：三处都是 `rgb(111,111,106)`（模型名 500 字重、两个触发器 600 字重），同行的原生按钮也由这条规则上色。
+
+改动：`theme/tokens.css` 新增成对的 `--ccd-text-strong`（浅 `#000000`／深 `#ffffff`）——不复用 `--ccd-text`，也不由配置表面派生，所以自成一段而不进两个配色块；`features/model-controls/controls.css` 用 0-3-2／0-3-1 的守卫规则把墨色写到行规则之上，并去掉两个触发器的 `--ccd-font-weight-strong`；`features/model-controls/ModelControls.tsx` 的模型名元素从 `<strong>` 改成 `<span class="ccd-model-name">`（强调由墨色承担，元素不再声称强调）；`theme/composer.css` 里原生触发器的两个 span 同样改取 `--ccd-text-strong`、不再加粗，同一个座位无论谁渲染都一致。provider 分组标题仍是有意保留的 `--ccd-text-secondary`。
+
+本地检查：`npm run check` 通过——类型、架构、68 项行为测试、构建、54 文件包检查。
+
+真实运行在隔离 `.cache/verify/home-ink`（由 `.cache/verify/home-web` 复制，`file:` 指向仓库、正式插件加载）的官方 Web 客户端，DSH `0.2.0-rc.2`，Playwright Chromium 1280×820 @2x，脚本 `.verify/model-panel-ink.mjs`，**0 pageerror**。同一页读计算样式与胜出的规则：
+
+| 探针 | 改动前 | 改动后 | 改动后胜出规则 |
+| --- | --- | --- | --- |
+| 菜单里的模型名 | `rgb(111,111,106)`／500 | **`rgb(0,0,0)`／400** | `.ccd-model-controls .ccd-model-options button`（0-3-2） |
+| 模型触发器 | `rgb(111,111,106)`／600 | **`rgb(0,0,0)`／400** | `.ccd-model-controls .ccd-model-trigger`（0-3-1） |
+| effort 触发器 | `rgb(111,111,106)`／600 | **`rgb(0,0,0)`／400** | `.ccd-model-controls .ccd-effort-trigger`（0-3-1） |
+| provider 分组标题 | `rgb(111,111,106)` | `rgb(111,111,106)`（有意保留） | `.ccd-model-provider` |
+| 行内相邻的原生按钮 | `rgb(111,111,106)` | `rgb(111,111,106)`（无回归） | `.yhfFVG_row button` |
+| 深色（同一 DOM 置 `body[data-ds-dark-theme]`） | — | 模型名与两个触发器 `rgb(255,255,255)` | 同上的深色声明 |
+
+浮层几何不变（240px 宽、同一锚点）；模型项改用 span 后点击链仍通：点已选中的那一项仍走官方 select 并关闭菜单（`labelBefore`／`labelAfter` 都是 `DeepSeek-V41-Flash`，`menuClosed` true）。
+
+证据：`output/playwright/model-panel-ink/` 的 `before/`（改动前）与 `after/model-panel.png` 加两份 `report.json`；复验脚本 `.verify/model-panel-ink.mjs`（自带 before／after 记录、深色探针与点击校验）。`.verify/effort-lifecycle.mjs` 里按名字点选模型项的选择器随标记改成 `.ccd-model-name`。
+
+边界：只在隔离 Web profile 复验，**没有在真实 Electron 窗口重装复验**；`.verify/effort-lifecycle.mjs` 本轮没有整脚本重跑（它测 effort 生命周期，不是这次样式），只单独验证了改用 span 后的点选与关闭。`--ccd-text-strong` 与 `--ccd-text` 一样不由配置画布派生，因此「浅色方案 + 用户配了很深的画布」时纯黑字同样会失去对比度——与既有的「文字与强调色不可配」是同一处边界（见 [待办](TECH_DEBT.md)）。
+
+## 界面字体栈以 Geist 打头（2026-10-03）
+
+确认参考字体 Anthropic Sans／Serif 不能分发之后（字体里只有 `Copyright 2025 Anthropic PBC`、没有许可字段，本机那两份来自第三方 GitHub 副本），改用一支可再分发的近似字体：Geist 是 Anthropic Sans 的上游设计（`Anthropic Sans` 的字体厂商字段为 `BSPK x Geist x Anthropic`），以 SIL OFL 1.1 分发，允许随软件分发且要求随附许可。
+
+改动：`theme/tokens.css` 的 `--ccd-font-fallback` 前加 `Geist`——它是默认栈的唯一来源，`theme/tokens.ts` 只在用户配置了族名时前置，不复制字体清单；新增 `assets/fonts/Geist-Variable.ttf`（上游 Geist v1.7.2 的 `Geist[wght].ttf` 逐字节副本，SHA-256 `cdcc4815cbf5f9882fa74e48f8ab410a0495781a58ff7316570f664e7e987753`，只改文件名）与 `assets/fonts/OFL.txt`（`c683bfbcc7e087f5d37a54ef628f10387c451a83ddc459b151403a164ac46c90`）；`install.md` 增加可选安装小节（校验和、已有 Geist 就整段跳过、不需要 sudo、回退命令）；README／AGENTS／IMPLEMENTATION／DSH_COMPATIBILITY 同步。**字体不进 npm 包**：`package.json` 的 `files` 白名单不含 `assets/`，`check:package` 仍是 54 文件，包体积不变。
+
+本地检查：`npm run check` 通过——类型、架构、68 项行为测试、构建、54 文件包检查。
+
+真实运行在隔离 `.cache/verify/home-web` 的官方 Web 客户端（DSH `0.2.0-rc.2`、`file:` 指向仓库、正式插件加载），Playwright Chromium 1280×900 @2x，脚本 `.verify/font-stack.mjs`，**0 pageerror**。探针继承 `body`（插件把 `var(--ccd-font-ui)` 写在 `html[data-dsh-ccd-style="true"] body` 上），实际使用的字体由 CDP `CSS.getPlatformFontsForNode` 读出：
+
+| 探针 | 计算出的 font-family | 实际使用的字体 |
+| --- | --- | --- |
+| 西文，`var(--ccd-font-ui)` | `Geist, -apple-system, "system-ui", "SF Pro Text", …` | **Geist**（61/61 字形） |
+| 中文，同一栈 | 同上 | **PingFang SC**（13/13 字形）——Geist 不含 CJK，按设计回落 |
+| 仅尾部栈（未装 Geist 的机器看到的效果） | `-apple-system, "system-ui", "SF Pro Text", …` | `.SF NS`，与改动前的默认栈一致 |
+
+本机 `~/Library/Fonts` 已有用户自行安装的 Geist 三支静态字重（`Geist-Regular/Medium/SemiBold.ttf`），所以"装了 Geist 就生效"这一半是在**真实系统字体**上测到的，不是注入的网页字体；`document.fonts.check('14px Geist')` 为 true。新会话页与聊天页同尺寸截图无异常。
+
+边界与未验证：**没有在真实 Electron 窗口复验**（用户的运行窗口未重载，Desktop profile 也没有重装）。隔离 Web 实例里 Chromium 的 Local Font Access API 返回空清单（该实例没有应用主进程的权限处理器，见兼容说明），因此"配置页字体菜单里出现 Geist"要在桌面窗口重启后确认；字体栈按族名解析，不依赖这个菜单。未装 Geist 时的回落只在"仅尾部栈"探针上测量，没有在卸载系统字体的机器上复测。参考字体 Anthropic Sans／Serif 仍不随仓库分发，也不写进字体栈。
+
+证据：`output/playwright/font-stack/` 的 `new-session.png`、`conversation.png` 与 `report.json`；复验脚本 `.verify/font-stack.mjs`；字体与许可见 `assets/fonts/`。
+
+## 深色模式与配置页主题控件（2026-10-03）
+
+按要求做深色。DSH 自己拥有 light／dark／system 偏好（`ThemeRuntime`），所以没有新建开关，只做两件事：把「为浅色画布挑的颜色」与深色解耦（成对下发 + 内置深色调色板），并按用户截图在配置页加一行「外观 → 主题」的三段控件，写同一条宿主偏好。
+
+改动：`theme/tokens.css` 新增 `html[data-dsh-ccd-style="true"] body[data-ds-dark-theme]` 深色块（表面、线、文字、Markdown、diff、effort 参考字段与阴影），颜色字面量仍只在这一个文件里；`theme/palette.ts` 新增 `BUILT_IN_DARK` 与深色块逐字节对应；`theme/tokens.ts` 的每个条目改成 `{ light, dark }`——浅色侧是配置派生值（未配置时内置浅色），深色侧固定内置深色，字体两项两侧同值；`contracts/ports.ts` 新增 `ThemePreferencePort`，`compat/adapter.ts` 用 `getTheme`／`setTheme`／`theme/change` 构造它（缺成员时为 null，页面少一行而不是激活失败），`apply.ts` 把它交给配置页；配置页新增 `ThemeRow`（三格、16px 图标、箭头键在组内循环）与「外观」节标题，`settings.css` 的槽、分段与选中格全部用宿主 `--dsw-*` token，因为插件关闭时这页也要能读。
+
+本地检查：`npm run check` 通过——类型、架构、68 项行为测试、构建、54 文件包检查。新增／改写断言：两套内置值必须与 stylesheet 逐字节一致、浅色块声明过的每个颜色变量都要有深色对应、深色正文与次级文字对画布的对比度 ≥7:1 与 ≥4.5:1、深色卡片比画布亮而侧栏比画布暗、配置色只影响浅色侧、字体两侧同值；`tests/theme-preference.test.ts` 覆盖偏好端口的读／写／订阅与「缺成员即降级」。
+
+真实运行在隔离 `.cache/verify/home-web` 的官方 Web 客户端（DSH `0.2.0-rc.2`、`file:` 指向仓库、正式插件加载），Playwright Chromium 1280×900 @2x，脚本 `.verify/theme-dark.mjs`，**0 pageerror**：
+
+| 检查 | 结果 |
+| --- | --- |
+| 控件几何 | 槽 92×32、圆角 9px，三格各 30×30；浅色实测槽 `rgb(243,243,242)`、选中格 `rgb(255,255,255)` + 边框 `rgb(235,235,233)`（参考图槽 #f3f3f3、选中格白底细边），深色槽 `rgb(31,30,29)`、选中格 `rgb(48,48,46)` + 边框 `rgb(52,52,49)`——两种配色里都是「凹槽 + 抬起的一格」；起始选择等于持久偏好 |
+| 点「深色」 | `body[data-ds-dark-theme]` 出现；`--ccd-canvas` #262624、`--ccd-card` #30302e、`--ccd-sidebar` #1f1e1d、`--ccd-border` #3e3e3b；宿主三个被覆盖 token 同步为 #262624／#1f1e1d／#3e3e3b |
+| 持久化 | profile `cordis.patch.yml` 的 `ui-theme.preference` 先变 `dark` 再回 `light`；插件自己的 `ui-skin-ccd-style` 条目逐字未改 |
+| 键盘 | 选中格是组内唯一 tab stop，←／→ 移动选择并循环 |
+| 配置色 | 浅色下配 `#303030` 后画布即 #303030，切深色仍是 #262624（配置色不进入深色） |
+| system | `emulateMedia({colorScheme:'dark'})` 下选 system → 深色；媒体查询回到浅色 → 恢复 |
+| 界面 | 新会话页画布 #262624、侧栏 #1f1e1d、Composer 卡片可见；聊天页用户气泡 #2f2f2d 与画布区分；effort 浮层 #2b2a28 底、深紫渐变字段与浅色滑钮 |
+| 关闭界面 | 配置页仍在、主题行仍可切换；重开后回到浅色并保持 `enabled: true` |
+
+证据：`output/playwright/theme-dark/` 的 `config-light.png`／`config-dark.png`／`config-light-again.png`／`config-off-dark.png`／`hero-light.png`／`hero-dark.png`／`chat-dark.png`／`effort-dark.png` 与 `report.json`（12 项判定全部 true）；复验脚本 `.verify/theme-dark.mjs`（固定本机浏览器路径与隔离 profile 的测试会话，不是可移植自动测试）。
+
+**补充：背景色作用域的说明文字（用户要求）。** 两个背景色行下方加了一行灰色说明（`.ccd-settings-note`，走宿主 `--dsw-alias-label-caption`）：「自定义背景色只作用于浅色模式；深色模式使用内置深色调色板。」文案在 `features/settings/locales.ts` 的 `note.coloursApplyToLight`（zh／en 各一条），挂在两行之后而不是每行重复一次。隔离 Web 客户端实测（`.verify/config-colour-note.mjs`，0 pageerror）：说明只有 1 处、位于「外观」节内、在两行背景色之下，文案命中「只作用于浅色模式」「内置深色」，浅色墨色 `rgb(173,178,184)`、深色 `rgb(129,133,140)`（宿主 caption token 随配色翻转）。证据：`output/playwright/config-colour-note/` 的 `section-light.png`／`section-dark.png`／`config-light.png`／`config-dark.png` 与 `report.json`（4 项判定全部 true）。
+
+补充交付：`artifacts/install-colour-note-20261003-003422/dsh-ccd-style-0.1.0.tgz`（54 文件，SHA-256 `2a2025a54a562614e4c472fc97a2c594120477bf58a14de9178618937dde3e0d`，包内与安装副本 `lib/client.js` `6d3a8f6cd4409792eb6e316012ae500beda08ba560702addabb93ba26aee8424`，等于当时的仓库构建；包内含说明文案）。安装前备份 `~/.dsh/profiles/desktop/.ccd-style-backup.SNrJhF/`；安装后用户 patch 逐字节未变（含 `enabled: true`、`debug: true`、`ui-theme.preference`），profile 依赖指向该 tarball。上一枚深色包 `install-dark-20261003-002252/` 保留作回退。
+
+边界：本轮**没有在真实 Electron 窗口复验，也没有重装 Desktop profile**（已安装的是上一版构建，深色要装新包后 ⌘R 才生效）；隔离 profile 的会话是短会话，正文里的代码块／表格／行内代码只做了变量与对比度断言，没有逐张深色截图核对；effort 浮层的像素场只做了整体观感与取色核对。自定义背景色按设计只在浅色侧生效，按模式各配一套颜色尚未提供（见 [待办](TECH_DEBT.md)）。
+
+交付：用户确认后已用正式 CLI 装入 Desktop profile。tarball 为 `artifacts/install-dark-20261003-002252/dsh-ccd-style-0.1.0.tgz`（54 文件，SHA-256 `1869cd9807238730576850b1a24b7e304b5ef3e99903009000f9baac8bfa3b2e`，包内 `lib/client.js` `c28e68225cbc18769902958aa8db97d17f076894ec1deae65560c0b0221d71f7`，含 3 处 `data-ds-dark-theme` 与 `ccd-settings-theme`）；安装副本的 `lib/client.js` 与仓库构建及包内逐字节一致（同哈希），profile 依赖指向该唯一路径，`dsh plugin --profile desktop list` 报 `dsh-ccd-style@0.1.0`。安装前配置备份在 `~/.dsh/profiles/desktop/.ccd-style-backup.4nkjHe/`（`package.json`／`cordis.patch.yml`／`pnpm-lock.yaml`）；安装前后用户 patch 的插件条目（`enabled: true`、`debug: true` 与字体、外观配置）逐字未动，唯一差异是 `ui-theme.preference` 在 00:25:32 由应用侧从 `system` 写成 `dark`（不是安装命令写的，也不影响插件条目）。桌面端按 ⌘R 重载后生效。注：打包时工作树里还有并行进行的「界面字体栈以 Geist 打头」与 `--ccd-text-strong` 改动（见本文件上一节），该包按当时的工作区状态构建，同时包含它们。
 
 ## 代码块改为带外框的白底卡片（2026-10-02）
 

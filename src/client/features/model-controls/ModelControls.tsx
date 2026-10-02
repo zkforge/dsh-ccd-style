@@ -82,7 +82,7 @@ function ModelPanel({ anchor, state, disabled, load, t, onClose, onSelect }: Pro
       {groups.map(group => <div key={group.id}><div className="ccd-model-provider">{group.name}</div>{group.models.map(model => {
         const chosen = state.current?.provider === group.id && state.current.model === model.id;
         return <button type="button" data-model-option key={model.id} aria-pressed={chosen} disabled={disabled}
-          onClick={() => onSelect(modelSelection(group.id, model, state.current))}><strong>{model.name}</strong><span aria-hidden="true">{chosen ? '✓' : ''}</span></button>;
+          onClick={() => onSelect(modelSelection(group.id, model, state.current))}><span className="ccd-model-name">{model.name}</span><span aria-hidden="true">{chosen ? '✓' : ''}</span></button>;
       })}</div>)}
     </div>
   </div>;

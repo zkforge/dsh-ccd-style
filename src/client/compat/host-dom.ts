@@ -136,6 +136,10 @@ export const HOST = Object.freeze({
   heroHeadline: '.bocITq_headline',
   heroWorkspaceChip: '.bocITq_workspace',
   heroWorkspaceRow: '.ST7X_W_heroWorkspaceRow',
+  /** Hero-phase Composer column: the greeting block and the input stack are its
+      children, so the statistics card is appended here and positioned against
+      the greeting. */
+  heroComposerStack: '.ST7X_W_composerStack',
   /** Every menu surface the `Menu` primitive renders, portal or in place. */
   menu: '[role="menu"]',
   menuItem: '[role="menuitem"]',

@@ -6,6 +6,10 @@
  * light grey rows. Every value here is derived from the two configured colours
  * with fixed ratios, so the result is deterministic and testable — and no other
  * stylesheet gains a literal colour (see `scripts/check-architecture.mjs`).
+ *
+ * The dark palette is not derived: it is a fixed set of values measured for the
+ * dark canvas and mirrored by `theme/tokens.css`, because a colour the user
+ * picked for a light canvas says nothing about the dark one.
  */
 
 export interface Rgb {
@@ -38,6 +42,27 @@ export const BUILT_IN_SURFACES = Object.freeze({
   canvas: '#fcfcfb',
   sidebar: '#fbfbfa',
   border: '#e3e3e1',
+});
+
+/**
+ * Built-in dark palette, byte-identical to the dark block of
+ * `theme/tokens.css`; a local test parses that stylesheet and fails when the two
+ * drift apart. Configured backgrounds do not reach this mode (see the file
+ * comment), so the theme layer can publish these values as the `dark` side of
+ * every surface pair.
+ */
+export const BUILT_IN_DARK: Palette = Object.freeze({
+  canvas: '#262624',
+  sidebar: '#1f1e1d',
+  card: '#30302e',
+  track: '#1f1e1d',
+  raised: '#2f2f2d',
+  hover: '#313130',
+  selected: '#3a3a37',
+  border: '#3e3e3b',
+  borderStrong: '#474743',
+  borderSoft: '#343431',
+  tableHeadLine: '#4a4a46',
 });
 
 const WHITE: Rgb = Object.freeze({ r: 255, g: 255, b: 255 });

@@ -183,14 +183,16 @@ html[data-dsh-ccd-style="true"] .yhfFVG_row button {
 }
 
 /* The model selector's two texts — the model name and the reasoning effort —
-   are the row's chosen values, not chrome, so they are set bolder than the
-   row's other labels. The host draws the trigger itself at `font-weight: 400`,
-   and each text is its own span, so the weight lands on the spans rather than
-   on the button. Host classes are pinned in src/client/compat/host-dom.ts
-   (`ui-model-selection`'s ModelSelect.module.css, `cl2Rlq_`). */
+   are the row's chosen values, not chrome, so they carry the chosen-value ink
+   instead of the row's label grey; the host's own `font-weight: 400` stays.
+   Each text is its own span, so the colour lands on the spans rather than on
+   the button the rule above paints, and this plugin's own model/effort pair
+   (features/model-controls) follows the same token. Host classes are pinned in
+   src/client/compat/host-dom.ts (`ui-model-selection`'s
+   ModelSelect.module.css, `cl2Rlq_`). */
 html[data-dsh-ccd-style="true"] .cl2Rlq_triggerLabel,
 html[data-dsh-ccd-style="true"] .cl2Rlq_triggerEffort {
-  font-weight: var(--ccd-font-weight-strong);
+  color: var(--ccd-text-strong);
 }
 
 /* Budget the complete row: the native model-collapse check cannot see the

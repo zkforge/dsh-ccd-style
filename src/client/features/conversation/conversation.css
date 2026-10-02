@@ -537,6 +537,30 @@ html[data-dsh-ccd-style="true"] .gKv1-q_root ._markdown_1ypvv_5:not([data-markdo
   border-bottom: 0;
 }
 
+/*
+ * Wide tables stay inside the content column.
+ *
+ * The host marks every table of four columns or more `md-table-wide`
+ * (AssistantMarkdown.module.css) and bleeds that wrapper out to the scroller's
+ * full width through `--dsh-table-spare`／`--dsh-table-lead`, pinning the table's
+ * leading edge back to the column with a negative margin and a matching leading
+ * pad. In the host's own geometry the Composer card is 32px wider than the
+ * column, so the borrowed width lands inside its edges; here the card and the
+ * column are the same width, and a bleeded table left the card and the Composer
+ * on different right edges (measured +86px at the reference window, growing with
+ * the view area). Dropping the bleed keeps the table on the column; a table
+ * whose rows cannot wrap far enough still uses the host's own `md-table-wide`
+ * scroll, which needs the wrapper's own `overflow-x` and scrollbar gutter, so
+ * neither is touched here.
+ */
+html[data-dsh-ccd-style="true"] .gKv1-q_root .gKv1-q_body .md-table-wide {
+  box-sizing: border-box;
+  width: 100%;
+  max-width: 100%;
+  margin-left: 0;
+  padding-left: 0;
+}
+
 html[data-dsh-ccd-style="true"] .icaHSq_column {
   --dsh-chat-flow-gap: 10px;
 }

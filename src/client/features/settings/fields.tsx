@@ -1,4 +1,6 @@
+import { useRef } from 'react';
 import type { ChangeEvent, KeyboardEvent, MouseEvent, ReactElement } from 'react';
+import type { ThemePreference } from '../../contracts/ports.ts';
 import { FontMenu } from './FontMenu.tsx';
 import type { FontMenuLabels } from './FontMenu.tsx';
 
@@ -10,7 +12,8 @@ import type { FontMenuLabels } from './FontMenu.tsx';
  * type baseline, and a copy of an official component is not allowed. The
  * controls below reproduce that surface's shapes and read the same design
  * tokens — capsule switch, bordered select box with a chevron, bordered text
- * field — so the page sits in the host's panel without looking foreign.
+ * field, segmented preference control — so the page sits in the host's panel
+ * without looking foreign.
  */
 
 /** The chevron a select box carries; drawn here rather than copied. */
@@ -18,6 +21,39 @@ function Chevron(): ReactElement {
   return (
     <svg width="12" height="12" viewBox="0 0 12 12" aria-hidden="true">
       <path d="M3 4.5 6 7.5 9 4.5" fill="none" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
+  );
+}
+
+/**
+ * One 16px glyph per theme preference, drawn here from primitives (a framed
+ * panel, a rayed disc, a crescent) so no icon set is copied into the package.
+ * @param props - which preference the glyph stands for.
+ * @returns The glyph.
+ */
+function ThemeGlyph({ id }: { readonly id: ThemePreference }): ReactElement {
+  const stroke = { fill: 'none', stroke: 'currentColor', strokeWidth: 1.1 } as const;
+  return (
+    <svg width="16" height="16" viewBox="0 0 16 16" aria-hidden="true">
+      {id === 'system' ? (
+        <>
+          <rect x="2.3" y="3.1" width="11.4" height="7.9" rx="1.5" {...stroke} />
+          <path d="M8 11v1.4M6.3 12.9h3.4" {...stroke} strokeLinecap="round" />
+        </>
+      ) : null}
+      {id === 'light' ? (
+        <>
+          <circle cx="8" cy="8" r="3.2" {...stroke} />
+          <path
+            d="M8 1.2v1.6M8 13.2v1.6M1.2 8h1.6M13.2 8h1.6M3.2 3.2l1.1 1.1M11.7 11.7l1.1 1.1M12.8 3.2l-1.1 1.1M4.3 11.7l-1.1 1.1"
+            {...stroke}
+            strokeLinecap="round"
+          />
+        </>
+      ) : null}
+      {id === 'dark' ? (
+        <path d="M13.9 8.5A6 6 0 1 1 7.5 2a4.7 4.7 0 0 0 6.4 6.5Z" {...stroke} strokeLinejoin="round" />
+      ) : null}
     </svg>
   );
 }
@@ -58,6 +94,87 @@ export function SwitchRow({ id, label, hint, checked, onChange }: SwitchRowProps
         >
           <span className="ccd-settings-thumb" aria-hidden="true" />
         </button>
+      </span>
+    </div>
+  );
+}
+
+export interface ThemeOption {
+  readonly id: ThemePreference;
+  readonly label: string;
+}
+
+export interface ThemeRowProps {
+  readonly id: string;
+  readonly label: string;
+  readonly hint?: string;
+  /** The persisted preference, straight from the theme service snapshot. */
+  readonly value: ThemePreference;
+  readonly options: readonly ThemeOption[];
+  readonly onChange: (preference: ThemePreference) => void;
+}
+
+/**
+ * One theme row: a recessed track with one glyph per preference and the chosen
+ * segment raised, the shape the reference screenshot uses. The value is the
+ * service's own preference, never a local copy, so the control cannot disagree
+ * with the host's Appearance row.
+ * @param props - Identity, copy, current preference and the change callback.
+ * @returns The row.
+ */
+export function ThemeRow(props: ThemeRowProps): ReactElement {
+  const { id, label, hint, value, options, onChange } = props;
+  const labelId = `${id}-label`;
+  const hintId = `${id}-hint`;
+  const group = useRef<HTMLSpanElement | null>(null);
+
+  /** Radio-group keyboard model: arrows move focus and selection together. */
+  const move = (step: number): void => {
+    const current = options.findIndex(option => option.id === value);
+    const next = options[(current + step + options.length) % options.length];
+    if (next === undefined) return;
+    onChange(next.id);
+    group.current?.querySelectorAll('button')[options.indexOf(next)]?.focus();
+  };
+
+  return (
+    <div className="ccd-settings-row" data-ccd-row="theme">
+      <span className="ccd-settings-label">
+        <span className="ccd-settings-name" id={labelId}>{label}</span>
+        {hint === undefined ? null : <span className="ccd-settings-hint" id={hintId}>{hint}</span>}
+      </span>
+      <span className="ccd-settings-control">
+        <span
+          ref={group}
+          className="ccd-settings-segmented"
+          role="radiogroup"
+          aria-labelledby={labelId}
+          {...(hint === undefined ? {} : { 'aria-describedby': hintId })}
+          onKeyDown={(event: KeyboardEvent<HTMLSpanElement>) => {
+            const step = event.key === 'ArrowRight' || event.key === 'ArrowDown' ? 1
+              : event.key === 'ArrowLeft' || event.key === 'ArrowUp' ? -1 : 0;
+            if (step === 0) return;
+            event.preventDefault();
+            move(step);
+          }}
+        >
+          {options.map(option => (
+            <button
+              key={option.id}
+              type="button"
+              id={`${id}-${option.id}`}
+              className="ccd-settings-segment"
+              role="radio"
+              aria-checked={option.id === value}
+              aria-label={option.label}
+              title={option.label}
+              tabIndex={option.id === value ? 0 : -1}
+              onClick={() => onChange(option.id)}
+            >
+              <ThemeGlyph id={option.id} />
+            </button>
+          ))}
+        </span>
       </span>
     </div>
   );

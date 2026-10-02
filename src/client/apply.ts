@@ -61,7 +61,7 @@ export function apply(ctx: Context): void {
       error: (message, error) => console.error(`[${PLUGIN_ID}] ${message}`, error),
     };
     const settingsScope = new CleanupScope(error => logger.error('settings page cleanup failed', error));
-    mountSettingsPage(ctx, dom, form, settingsScope);
+    mountSettingsPage(ctx, dom, form, host.themePreference, settingsScope);
     let active: CleanupScope | null = null;
     let released = false;
     let applied: string | null = null;

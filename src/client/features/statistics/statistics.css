@@ -1,0 +1,149 @@
+/*
+ * New-session statistics card. Numbers come from the reference card's own
+ * values (Tailwind classes) cross-checked against the @2x screenshot; see
+ * docs/STATS_RESEARCH.md. Colours are theme variables only.
+ *
+ * The card is absolutely positioned under the host's greeting: the hero
+ * Composer stack sits at the bottom of the column and the greeting is lifted
+ * to the top of the page (`--ccd-hero-top`). `--ccd-stats-gap` carries the
+ * greeting's measured height plus the 20px gap, so a type or language change
+ * moves the card with it. Horizontally the card starts at the Composer card's
+ * left edge — the reference gives the title, the card and the input card one
+ * shared left edge instead of centring them.
+ */
+
+html[data-dsh-ccd-style="true"] [data-ccd-stats-card] {
+  position: absolute;
+  z-index: 1;
+  top: calc(var(--ccd-hero-top) + var(--ccd-stats-gap, 58px));
+  left: calc(50% - min(var(--dsh-composer-card-max-width, 770px), 100% - 32px) / 2);
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  /* Header to body. Together with the 8px padding above it and the 24px header
+     this puts the first tile row ~40px below the card's top edge, which is the
+     proportion the reference shows. Tiles and heatmap stay 6px apart inside the
+     body, and the footer sentence rides the same 6px group. */
+  gap: 8px;
+  width: min(480px, calc(100% - 32px));
+  padding: 8px 12px 12px;
+  border: 1px solid var(--ccd-border-soft);
+  border-radius: 8px;
+  background: var(--ccd-stats-panel);
+  font-family: var(--ccd-font-ui);
+  pointer-events: auto;
+}
+
+/* Header: the reference's segmented control, here just its active tab. */
+html[data-dsh-ccd-style="true"] [data-ccd-stats-card] .ccd-stats-header {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  min-width: 0;
+}
+
+html[data-dsh-ccd-style="true"] [data-ccd-stats-card] .ccd-stats-tab {
+  display: inline-flex;
+  align-items: center;
+  height: 24px;
+  padding: 0 8px;
+  border-radius: 6px;
+  color: var(--ccd-stats-value);
+  font-size: 13px;
+  font-weight: 500;
+  line-height: 24px;
+  white-space: nowrap;
+}
+
+html[data-dsh-ccd-style="true"] [data-ccd-stats-card] .ccd-stats-tab[data-active="true"] {
+  background: var(--ccd-stats-tab);
+}
+
+html[data-dsh-ccd-style="true"] [data-ccd-stats-card] .ccd-stats-body {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+/* The 3×2 tile grid: 4px gutters, 44px tiles, 5px corners. */
+html[data-dsh-ccd-style="true"] [data-ccd-stats-card] .ccd-stats-tiles {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 4px;
+}
+
+html[data-dsh-ccd-style="true"] [data-ccd-stats-card] .ccd-stats-tile {
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-height: 44px;
+  padding: 4px;
+  border-radius: 5px;
+  background: var(--ccd-stats-tile);
+}
+
+html[data-dsh-ccd-style="true"] [data-ccd-stats-card] .ccd-stats-label {
+  overflow: hidden;
+  color: var(--ccd-stats-label);
+  font-size: 12px;
+  line-height: 15px;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+html[data-dsh-ccd-style="true"] [data-ccd-stats-card] .ccd-stats-value {
+  overflow: hidden;
+  color: var(--ccd-stats-value);
+  font-size: 13px;
+  font-weight: 580;
+  font-variant-numeric: tabular-nums;
+  line-height: 19px;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+/* Contribution heatmap: 26 columns of 7 square cells, 3px gutters. */
+html[data-dsh-ccd-style="true"] [data-ccd-stats-card] .ccd-stats-heat {
+  display: flex;
+  gap: 3px;
+  width: 100%;
+}
+
+html[data-dsh-ccd-style="true"] [data-ccd-stats-card] .ccd-stats-heat-col {
+  display: flex;
+  flex: 1 1 0;
+  flex-direction: column;
+  gap: 3px;
+  min-width: 0;
+}
+
+html[data-dsh-ccd-style="true"] [data-ccd-stats-card] .ccd-stats-heat-cell {
+  aspect-ratio: 1;
+  border-radius: 2px;
+  background: var(--ccd-stats-tile);
+}
+
+html[data-dsh-ccd-style="true"] [data-ccd-stats-card] .ccd-stats-heat-cell[data-level="1"] {
+  background: var(--ccd-stats-heat-1);
+}
+
+html[data-dsh-ccd-style="true"] [data-ccd-stats-card] .ccd-stats-heat-cell[data-level="2"] {
+  background: var(--ccd-stats-heat-2);
+}
+
+html[data-dsh-ccd-style="true"] [data-ccd-stats-card] .ccd-stats-heat-cell[data-level="3"] {
+  background: var(--ccd-stats-heat-3);
+}
+
+html[data-dsh-ccd-style="true"] [data-ccd-stats-card] .ccd-stats-heat-cell[data-level="4"] {
+  background: var(--ccd-stats-heat-4);
+}
+
+html[data-dsh-ccd-style="true"] [data-ccd-stats-card] .ccd-stats-note {
+  margin: 0;
+  padding-top: 4px;
+  color: var(--ccd-stats-label);
+  font-size: 11px;
+  line-height: 17px;
+}

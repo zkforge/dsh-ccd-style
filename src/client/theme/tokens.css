@@ -3,9 +3,18 @@
  * docs/reference at @2x and are expressed in logical px at the 1374x871
  * reference window. This is the only stylesheet allowed to carry literal
  * colours; every other rule consumes these variables.
+ *
+ * Two palettes live here: the measured light one on the root marker, and the
+ * dark one under the host's own scheme attribute (see the block below). Values
+ * that do not depend on the scheme (geometry, type, masked artwork) stay in the
+ * first block; only colours are repeated per scheme.
  */
 html[data-dsh-ccd-style="true"] {
   /* Geometry */
+  /* Top of the blank-session greeting block. The reference puts the title a
+     short step below the header instead of centring it, so the statistics card
+     hanging under it still clears the Composer on a short window. */
+  --ccd-hero-top: 16px;
   --ccd-sidebar-width: 264px;
   --ccd-sidebar-inline-padding: 10px;
   --ccd-sidebar-bottom-padding: 8px;
@@ -84,6 +93,25 @@ html[data-dsh-ccd-style="true"] {
   --ccd-text-muted: #8f8f8a;
   --ccd-text-placeholder: #89877f;
 
+  /* New-session statistics card. The reference panel is a stacked translucent
+     grey: the card is 5% black over the canvas and a stat tile (and an empty
+     heat cell) is 10% black over the card, so these are the measured opaque
+     equivalents. The four heat levels are the reference's own `hsl(217 70% L%)`
+     with L = 72／64／56／48, i.e. "that day's value / the busiest day" in four
+     equal steps. */
+  --ccd-stats-panel: #f0f0f0;
+  --ccd-stats-tile: #dadada;
+  /* The card header's active tab: the reference paints `fill-ghost-hover`, the
+     same 5% black as the card itself, over the card — one step lighter than a
+     stat tile. */
+  --ccd-stats-tab: #e6e6e6;
+  --ccd-stats-label: #898781;
+  --ccd-stats-value: #0b0b0b;
+  --ccd-stats-heat-1: hsl(217 70% 72%);
+  --ccd-stats-heat-2: hsl(217 70% 64%);
+  --ccd-stats-heat-3: hsl(217 70% 56%);
+  --ccd-stats-heat-4: hsl(217 70% 48%);
+
   /* Assistant Markdown palette matched to the CCD transcript reference. */
   --ccd-link: #2b61b5;
   --ccd-link-underline: #a7badd;
@@ -97,15 +125,21 @@ html[data-dsh-ccd-style="true"] {
 
   /* Type. The two fallback tails are what a configured family is prepended to
      (see theme/tokens.ts); with nothing configured the consuming variables keep
-     the built-in stacks. */
-  --ccd-font-fallback: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Helvetica Neue",
+     the built-in stacks. Geist leads the interface tail because it is the
+     upstream design Anthropic Sans was cut from; it is resolved from the system
+     font list, so the tail degrades to the platform stack when it is not
+     installed (assets/fonts/ ships the file for a local install only). */
+  --ccd-font-fallback: Geist, -apple-system, BlinkMacSystemFont, "SF Pro Text", "Helvetica Neue",
     "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", sans-serif;
   --ccd-code-fallback: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace;
   --ccd-font-ui: var(--ccd-font-fallback);
   --ccd-font-code: var(--ccd-code-fallback);
   --ccd-font-size-body: 14px;
   --ccd-font-size-muted: 13px;
-  --ccd-font-size-headline: 26px;
+  /* Blank-session title. The reference's own type scale puts the greeting on
+     `--cds-font-size-title` (1.25rem, ~20px) with a 25px leading at weight 400,
+     which is a good deal quieter than the 26px this used to be. */
+  --ccd-font-size-headline: 20px;
   /* The one step up from the host's own 400: used where a control has to read
      as a chosen value rather than as chrome (model, reasoning effort). */
   --ccd-font-weight-strong: 600;
@@ -133,6 +167,78 @@ html[data-dsh-ccd-style="true"] {
   /* Elevation */
   --ccd-shadow-card: 0 1px 2px rgb(0 0 0 / 4%);
   --ccd-shadow-segment: 0 1px 2px rgb(0 0 0 / 8%);
+}
+
+/*
+ * Dark palette.
+ *
+ * DSH's theme presenter writes `body[data-ds-dark-theme]` from the resolved
+ * colour scheme (`@deepseek-ai/dsh-client-ui-theme` client styles, DSH
+ * 0.2.0-rc.2), so the plugin follows the host's own switch instead of carrying a
+ * second one. The block is a descendant of the root activation marker: the
+ * variables land on `body`, cover every colour the light block declares, and
+ * stay absent while the plugin is off.
+ *
+ * The warm-neutral family is kept rather than swapping in the host's bluish
+ * greys: the same relationship holds in both schemes (canvas a touch lighter
+ * than the sidebar, card the brightest surface), while the recessed steps
+ * (track, raised, hover, selected) move *up* in lightness where the light
+ * palette moves down, because on a dark canvas a surface reads as raised by
+ * catching more light. Lines keep one visible step against the surfaces they
+ * separate; text keeps the light palette's descending tone order.
+ */
+html[data-dsh-ccd-style="true"] body[data-ds-dark-theme] {
+  /* Surfaces. The track is the one surface that steps *down* in both schemes:
+     it is the groove a raised thumb or selected segment sits in, so on the dark
+     canvas it takes the sidebar's darker step rather than the card's brighter
+     one (otherwise the raised piece would be invisible). */
+  --ccd-canvas: #262624;
+  --ccd-sidebar: #1f1e1d;
+  --ccd-card: #30302e;
+  --ccd-track: #1f1e1d;
+  --ccd-raised: #2f2f2d;
+  --ccd-hover: #313130;
+  --ccd-selected: #3a3a37;
+
+  /* Lines */
+  --ccd-border: #3e3e3b;
+  --ccd-border-strong: #474743;
+  --ccd-border-soft: #343431;
+  /* The head rule stays the one line drawn stronger than the card outline. */
+  --ccd-table-head-line: #4a4a46;
+
+  /* Text */
+  --ccd-text: #f0efec;
+  --ccd-text-secondary: #b4b1ab;
+  --ccd-text-muted: #918f89;
+  --ccd-text-placeholder: #8b8983;
+
+  /* Statistics card, dark side: the same stacked greys over this canvas, and
+     the heat ramp raised one step so the steps stay visible on a dark panel. */
+  --ccd-stats-panel: #2c2c2a;
+  --ccd-stats-tile: #383835;
+  --ccd-stats-tab: #3a3a37;
+  --ccd-stats-label: #918f89;
+  --ccd-stats-value: #f0efec;
+  --ccd-stats-heat-1: hsl(217 62% 78%);
+  --ccd-stats-heat-2: hsl(217 64% 70%);
+  --ccd-stats-heat-3: hsl(217 66% 62%);
+  --ccd-stats-heat-4: hsl(217 70% 54%);
+
+  /* Assistant Markdown palette, lightened for a dark transcript. */
+  --ccd-link: #86b0e8;
+  --ccd-link-underline: #4a5c76;
+  --ccd-inline-code-text: #f0918a;
+  --ccd-inline-code-fill: #35332f;
+  --ccd-inline-code-border: #454239;
+
+  /* State colours that DSH already owns semantics for. */
+  --ccd-diff-added: #7cbd72;
+  --ccd-diff-removed: #e08fae;
+
+  /* Elevation reads as a shadow under the surface, not as a grey wash. */
+  --ccd-shadow-card: 0 1px 2px rgb(0 0 0 / 40%);
+  --ccd-shadow-segment: 0 1px 2px rgb(0 0 0 / 50%);
 }
 
 /* zanwei effort reference palette, MIT; canvas reads these theme values. */
@@ -185,4 +291,75 @@ html[data-dsh-ccd-style="true"] {
 
 html[data-dsh-ccd-style="true"] {
   --ccd-effort-shadow: 0 1px 2px rgba(62, 56, 50, .05), 0 4px 10px rgba(62, 56, 50, .04), 0 12px 28px rgba(62, 56, 50, .06);
+}
+
+/*
+ * The same reference field on the dark canvas: the purple ramp keeps its
+ * left-to-right direction (neutral → violet) inside the dark range, the
+ * neutrals flip so the panel is a card above the transcript, and the knob stays
+ * the brightest thing on the track — its fill is also the tooltip's text
+ * colour, so the two keep following one value.
+ */
+html[data-dsh-ccd-style="true"] body[data-ds-dark-theme] {
+  --ccd-effort-color-1: #a48ede;
+  --ccd-effort-color-2: #b294d3;
+  --ccd-effort-color-3: #e7e4de;
+  --ccd-effort-color-4: #f6f4f0;
+  --ccd-effort-color-5: #a09b94;
+  --ccd-effort-color-6: #3a3936;
+  --ccd-effort-color-7: #4b4944;
+  --ccd-effort-color-8: #2b2a28;
+  --ccd-effort-color-9: rgba(255, 255, 255, 0.1);
+  --ccd-effort-color-10: #4d93f8;
+  --ccd-effort-color-11: rgba(0, 0, 0, 0.45);
+  --ccd-effort-color-12: rgba(0, 0, 0, 0.35);
+  --ccd-effort-color-13: rgba(0, 0, 0, 0.45);
+  --ccd-effort-color-14: #b7b2aa;
+  --ccd-effort-color-15: rgba(255, 255, 255, 0.06);
+  --ccd-effort-color-16: rgba(255, 255, 255, 0.14);
+  --ccd-effort-color-17: #3a3936;
+  --ccd-effort-color-18: rgba(0, 0, 0, 0.5);
+  --ccd-effort-color-19: #ece9e4;
+  --ccd-effort-color-20: rgba(255, 255, 255, 0.04);
+  --ccd-effort-color-21: #34332f;
+  --ccd-effort-color-22: #373430;
+  --ccd-effort-color-23: #3e3943;
+  --ccd-effort-color-24: #463e51;
+  --ccd-effort-color-25: #4f4560;
+  --ccd-effort-color-26: #57496a;
+  --ccd-effort-color-27: #5c4d71;
+  --ccd-effort-color-28: #524667;
+  --ccd-effort-color-29: #63527c;
+  --ccd-effort-color-30: #6e5989;
+  --ccd-effort-color-31: #786096;
+  --ccd-effort-color-32: #6f6c66;
+  --ccd-effort-color-33: rgba(255, 255, 255, 0.16);
+  --ccd-effort-color-34: rgba(0, 0, 0, 0.4);
+  --ccd-effort-color-35: rgba(0, 0, 0, 0.35);
+  --ccd-effort-pixel-leftColor: 92, 88, 98;
+  --ccd-effort-pixel-deepViolet: 150, 116, 196;
+  --ccd-effort-pixel-deepMid: 150, 128, 196;
+  --ccd-effort-pixel-midPurple: 162, 140, 204;
+  --ccd-effort-pixel-softMid: 162, 152, 204;
+  --ccd-effort-pixel-softLilac: 174, 164, 206;
+  --ccd-effort-pixel-paleCool: 184, 174, 206;
+  --ccd-effort-pixel-highlightColor: 200, 188, 224;
+  --ccd-effort-pixel-peakColor: 214, 204, 236;
+  --ccd-effort-shadow: 0 1px 2px rgba(0, 0, 0, .4), 0 4px 10px rgba(0, 0, 0, .3), 0 12px 28px rgba(0, 0, 0, .35);
+}
+
+/*
+ * Chosen-value ink. The Composer's model name — in the tool row and in the menu
+ * it opens — is the value that row exists to show, so it takes full black
+ * instead of the warm near-black every other primary label uses; the dark
+ * scheme keeps the same relationship with its own strongest ink, white. Neither
+ * side is derived from a configured surface, so the pair is declared here
+ * rather than in the scheme blocks above.
+ */
+html[data-dsh-ccd-style="true"] {
+  --ccd-text-strong: #000000;
+}
+
+html[data-dsh-ccd-style="true"] body[data-ds-dark-theme] {
+  --ccd-text-strong: #ffffff;
 }

@@ -2,7 +2,7 @@
 
 更新日期：2026-10-02。本文件描述当前架构；各模块现状见 [实施状态](docs/IMPLEMENTATION.md)，验证状态见 [验证记录](docs/VERIFICATION.md)。
 
-插件消费 DSH 的配置、服务与界面插槽，输出可撤销的样式与展示组件。Workspace、Session、消息、输入编辑器与执行状态由 DSH 持有；本项目只拥有启用状态、设计变量、样式表、展示组件及其资源。模型与 effort 的展示控件共享官方 ModelDirectory，不拥有独立选择状态；顶栏尾侧新增的两个入口只转发官方右侧栏的页签动作，不持有面板布局。四个界面 feature（shell、sidebar、new-session、conversation）已是 `implemented`；tool-calls 保留原生交互，statistics 因缺少真实全局用量接口保持关闭。
+插件消费 DSH 的配置、服务与界面插槽，输出可撤销的样式与展示组件。Workspace、Session、消息、输入编辑器与执行状态由 DSH 持有；本项目只拥有启用状态、设计变量、样式表、展示组件及其资源。模型与 effort 的展示控件共享官方 ModelDirectory，不拥有独立选择状态；顶栏尾侧新增的两个入口只转发官方右侧栏的页签动作，不持有面板布局；深浅两色（以及 `system`）同样由宿主的主题偏好驱动，插件只按当前配色下发对应的一套变量，不持有主题状态。四个界面 feature（shell、sidebar、new-session、conversation）已是 `implemented`；tool-calls 保留原生交互，statistics 因缺少真实全局用量接口保持关闭。
 
 ```mermaid
 flowchart LR
@@ -41,14 +41,14 @@ flowchart LR
 
 1. Host `Config` 声明的字段标记 `.volatile()`：DSH 设置层只把 volatile 路径投影成配置表单，浏览器半通过 `ctx.configForms.get(entryId)` 读取同一份数据。
 2. 客户端加载器创建的条目不带配置，因此 `apply(ctx)` 不再接受第二个配置参数；它订阅 `ui-skin-ccd-style` 片段，配置变化时先释放旧作用域再按新配置挂载。相同配置的重复发布会被签名比较跳过。
-3. `enabled` 默认为 false。启用时先挂载主题层（根属性、设计变量、共用 Composer 几何、语义 token 覆盖），再按 feature 顺序挂载各自的样式与观察器。
+3. `enabled` 默认为 false。启用时先挂载主题层（根属性、深浅两套设计变量、共用 Composer 几何、语义 token 覆盖），再按 feature 顺序挂载各自的样式与观察器。
 4. `mountFeatures()` 只执行已实现且配置启用的模块，为每个模块创建独立 CleanupScope。`planned` 只在 debug 下记录状态。
 5. 单个模块挂载失败时回滚已取得的资源，记录错误并继续其他模块；总启用失败时释放全部资源。
 6. 停用／配置变化／Cordis effect 释放后，以逆序释放资源，每个 disposer 只执行一次。共享启用标记按同一模块实例内的租约计数管理。
 7. **配置页挂在常驻作用域，不属于启用状态。** 它注册进侧栏「插件」页的行配置插槽（`plugins.row.config`，键 `<包名>#<行 id>`），用同一份 `configForms` 片段读写自己的配置；关掉界面后它仍然存在，否则用户无法在应用内把界面开回来。它在 `ctx.inject(['slots','locale'])` 的子作用域里注册自己的 zh／en 字典与页面，随外层 effect 一起释放。
-8. **颜色与字体只在主题层算一次。** `theme/palette.ts` 从配置色推导悬停／选中／分隔线等派生色，`theme/tokens.ts` 把宿主语义 token（`--dsw-alias-bg-base`、`--dsw-specific-sidebar-fill`、`--dsw-alias-border-l3`）与插件 token（`--ccd-*`）以及字体栈合成一个覆盖层，交给 `ctx.theme.overrideTokens`。未配置的部分不下发，内置调色板仍由 `theme/tokens.css` 唯一持有；字体栈的默认尾巴是那里的 `--ccd-font-fallback`／`--ccd-code-fallback`，TS 里不复制字体清单。
+8. **颜色与字体只在主题层算一次。** `theme/palette.ts` 从配置色推导悬停／选中／分隔线等派生色，并持有内置深色调色板；`theme/tokens.ts` 把宿主语义 token（`--dsw-alias-bg-base`、`--dsw-specific-sidebar-fill`、`--dsw-alias-border-l3`）与插件 token（`--ccd-*`）以及字体栈合成一个覆盖层，交给 `ctx.theme.overrideTokens`。每个条目都是 `{ light, dark }` 成对下发：浅色侧是配置派生值（未配置时是内置浅色），深色侧固定为内置深色，因为「为浅色画布挑的颜色」对深色没有意义。未配置的部分不下发，内置调色板仍由 `theme/tokens.css` 唯一持有——它在根标记下声明浅色、在宿主自己的 `body[data-ds-dark-theme]` 下声明深色；字体栈的默认尾巴是那里的 `--ccd-font-fallback`／`--ccd-code-fallback`，TS 里不复制字体清单。
 
-**架构约束：颜色字面量只允许出现在 `theme/tokens.css`。** 派生色是算术结果（`theme/palette.ts` 的纯函数），token 组合是纯函数（`theme/tokens.ts`），两者都可单测；其余样式表与组件只消费变量。
+**架构约束：颜色字面量只允许出现在 `theme/tokens.css`。** 派生色是算术结果（`theme/palette.ts` 的纯函数，深浅内置值也在这里，供 token 层成对下发），token 组合是纯函数（`theme/tokens.ts`），两者都可单测；其余样式表与组件只消费变量。深色块必须覆盖浅色块声明过的每一个颜色变量，由 `tests/theme-tokens.test.ts` 解析两张表核对。
 
 **架构约束：业务状态只有一个来源——DSH。** 插件不写 Session 日志，不扫描整段流式事件，也不建立第二套项目／会话状态。React 读取可变数据应使用 SDK 注入的标准 hooks；组件不能手工订阅或镜像宿主数据。
 
@@ -67,6 +67,8 @@ flowchart LR
 ## 版本相关的宿主适配
 
 DSH 用 CSS Modules，类名带构建哈希。所有宿主类名集中在 `src/client/compat/host-dom.ts`，并注明来自哪个包的哪个模块；其他文件不得硬编码宿主类名。稳定锚点用 `data-*` 属性（`data-slot`、`data-conversation-content`、`data-composer-seat` 等）。
+
+**深色不新增开关。** 宿主的主题 presenter 从解析后的配色写 `body[data-ds-dark-theme]`（`@deepseek-ai/dsh-client-ui-theme` 的客户端样式，DSH 0.2.0-rc.2），插件的深色块就挂在同一个属性下，`overrideTokens` 的深浅两侧也由同一份快照挑选。配置页的「外观 → 主题」是**同一条宿主偏好**的另一个入口：`compat/adapter.ts` 通过 `getTheme`／`setTheme`／`theme/change`（`ThemeRuntime` 的唯一读写入口与唯一变更信号）构造 `ThemePreferencePort` 交给页面，DOM 上的 `system` 由宿主的媒体查询解析。服务不提供这三个成员时端口为 null，页面少一行而不是整个激活失败。
 
 框架的三列宽度由 `ui-layout` 在 JavaScript 中求解并写成内联 `grid-template-columns`，样式表无法单独改写侧栏轨道。插件因此**不写任何轨道值**：侧栏宽度始终是 DSH 自己的偏好，分隔线画在侧栏自己的右边缘，拖动时线与指针同步移动（见 [DSH 兼容说明](docs/DSH_COMPATIBILITY.md)）。
 

@@ -1,6 +1,6 @@
 import type { Context } from '@deepseek-ai/cordis';
 import { createElement } from 'react';
-import type { ConfigFormPort, DomPort } from '../../contracts/ports.ts';
+import type { ConfigFormPort, DomPort, ThemePreferencePort } from '../../contracts/ports.ts';
 import type { CleanupScope } from '../../core/cleanup.ts';
 import { ENTRY_ID, PLUGIN_ID } from '../../../shared/identity.ts';
 import { ConfigPage } from './ConfigPage.tsx';
@@ -16,19 +16,22 @@ import css from './settings.css';
  * @param ctx - client context, injected for slots and the locale service.
  * @param dom - style port owning the page's stylesheet.
  * @param form - this plugin's configuration form.
+ * @param themePreference - the native theme preference face, or null when the
+ * theme service does not publish one.
  * @param scope - scope owning the stylesheet, the dictionary and the registration.
  */
 export function mountSettingsPage(
   ctx: Context,
   dom: DomPort,
   form: ConfigFormPort,
+  themePreference: ThemePreferencePort | null,
   scope: CleanupScope,
 ): void {
   scope.add(dom.mountStyles(css));
   const registration = registerSettingsPage(
     ctx,
     `${PLUGIN_ID}#${ENTRY_ID}`,
-    props => createElement(ConfigPage, { ...props, form }),
+    props => createElement(ConfigPage, { ...props, form, themePreference }),
   );
   scope.add(() => { void registration.dispose(); });
 }

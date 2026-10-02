@@ -1,12 +1,14 @@
 import { useCallback, useMemo, useState, useSyncExternalStore } from 'react';
 import type { MouseEvent, ReactElement } from 'react';
-import type { ConfigFormPort, SettingsPathOp } from '../../contracts/ports.ts';
+import type {
+  ConfigFormPort, SettingsPathOp, ThemePreference, ThemePreferencePort,
+} from '../../contracts/ports.ts';
 import { adoptConfig, APPEARANCE_FIELDS } from '../../../shared/config.ts';
 import type { AppearanceField, FeatureId, FontField } from '../../../shared/config.ts';
 import { commitColour, commitFont, setOperation, unsetOperation } from './edits.ts';
 import type { FieldErrors } from './edits.ts';
 import { loadSystemFontFamilies } from './fonts.ts';
-import { ColourRow, FontRow, SwitchRow } from './fields.tsx';
+import { ColourRow, FontRow, SwitchRow, ThemeRow } from './fields.tsx';
 import { zh } from './locales.ts';
 import type { SettingsKey } from './locales.ts';
 
@@ -21,6 +23,8 @@ export interface ConfigPageProps {
   readonly t?: SettingsTranslate | undefined;
   /** This plugin's own configuration form, passed by the assembly layer. */
   readonly form: ConfigFormPort;
+  /** The native theme preference, or null when the theme service lacks it. */
+  readonly themePreference?: ThemePreferencePort | null | undefined;
 }
 
 type WriteStatus = 'idle' | 'saving' | 'saved' | 'failed';
@@ -44,6 +48,15 @@ const FONT_LABELS: Record<FontField, SettingsKey> = {
 
 /** Rows the page shows; `uiCjk` stays available through the patch file. */
 const OFFERED_FONTS: readonly FontField[] = ['uiLatin', 'code'];
+
+/** Theme preferences in the reference control's order: system, light, dark. */
+const THEME_OPTIONS: readonly ThemePreference[] = ['system', 'light', 'dark'];
+
+const THEME_KEYS: Record<ThemePreference, SettingsKey> = {
+  system: 'theme.system',
+  light: 'theme.light',
+  dark: 'theme.dark',
+};
 
 /** Modules the page offers: the ones that actually mount something today. */
 const OFFERED_FEATURES: readonly FeatureId[] = ['shell', 'sidebar', 'new-session', 'conversation'];
@@ -70,7 +83,7 @@ const FEATURE_KEYS: Record<FeatureId, SettingsKey> = {
  * @returns The summary line or the configuration form.
  */
 export function ConfigPage(props: ConfigPageProps): ReactElement {
-  const { view, t, form } = props;
+  const { view, t, form, themePreference: theme } = props;
   const translate = useMemo<SettingsTranslate>(
     () => t ?? ((key: string) => (zh as Record<string, string>)[key] ?? key),
     [t],
@@ -82,6 +95,19 @@ export function ConfigPage(props: ConfigPageProps): ReactElement {
     () => (snapshot.status === 'ready' ? adoptConfig(snapshot.value) : null),
     [snapshot.status, snapshot.value],
   );
+
+  /* The theme preference belongs to the theme service, so the control reads it
+     from the service snapshot and never keeps a copy. */
+  const themePort = theme ?? null;
+  const subscribeTheme = useCallback(
+    (listener: () => void) => (themePort === null ? () => {} : themePort.subscribe(listener)),
+    [themePort],
+  );
+  const readTheme = useCallback(
+    () => (themePort === null ? null : themePort.preference()),
+    [themePort],
+  );
+  const preference = useSyncExternalStore(subscribeTheme, readTheme);
 
   const [status, setStatus] = useState<WriteStatus>('idle');
   const [errors, setErrors] = useState<FieldErrors>({});
@@ -188,6 +214,15 @@ export function ConfigPage(props: ConfigPageProps): ReactElement {
 
       <section className="ccd-settings-section">
         <h4 className="ccd-settings-title">{translate('section.appearance')}</h4>
+        {preference === null || themePort === null ? null : (
+          <ThemeRow
+            id="ccd-settings-theme"
+            label={translate('field.theme')}
+            value={preference}
+            options={THEME_OPTIONS.map(id => ({ id, label: translate(THEME_KEYS[id]) }))}
+            onChange={next => themePort.set(next)}
+          />
+        )}
         {APPEARANCE_FIELDS.map(field => {
           const failure = errors[field];
           return (
@@ -209,6 +244,9 @@ export function ConfigPage(props: ConfigPageProps): ReactElement {
             />
           );
         })}
+        {/* The two colour rows configure the light canvas; the dark palette is
+            built in, so the note sits under the pair rather than on each row. */}
+        <p className="ccd-settings-note">{translate('note.coloursApplyToLight')}</p>
       </section>
 
       <section className="ccd-settings-section">

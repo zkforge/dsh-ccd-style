@@ -10,14 +10,19 @@ export const SETTINGS_NAMESPACE = 'ccdSettings';
 
 /** Simplified Chinese dictionary; the key set is the source of truth. */
 export const zh = {
-  'summary': 'CCD 风格界面 · 背景色 · 字体',
+  'summary': 'CCD 风格界面 · 外观 · 字体',
   'section.general': '通用',
   'section.features': '模块',
-  'section.appearance': '背景色',
+  'section.appearance': '外观',
   'section.fonts': '字体',
   'field.enabled': '启用 CCD 风格界面',
+  'field.theme': '主题',
+  'theme.system': '跟随系统',
+  'theme.light': '浅色',
+  'theme.dark': '深色',
   'field.canvas': '会话背景色',
   'field.sidebar': '侧栏背景色',
+  'note.coloursApplyToLight': '自定义背景色只作用于浅色模式；深色模式使用内置深色调色板。',
   'field.uiLatin': '界面字体',
   'field.uiCjk': '界面中文字体',
   'field.code': '代码与等宽字体',
@@ -49,14 +54,19 @@ export type SettingsKey = keyof typeof zh;
 
 /** English dictionary; every Chinese key has a counterpart. */
 export const en: Record<SettingsKey, string> = {
-  'summary': 'CCD interface · background colours · typefaces',
+  'summary': 'CCD interface · appearance · typefaces',
   'section.general': 'General',
   'section.features': 'Modules',
-  'section.appearance': 'Background colours',
+  'section.appearance': 'Appearance',
   'section.fonts': 'Typefaces',
   'field.enabled': 'Enable the CCD interface',
+  'field.theme': 'Theme',
+  'theme.system': 'System',
+  'theme.light': 'Light',
+  'theme.dark': 'Dark',
   'field.canvas': 'Conversation background',
   'field.sidebar': 'Sidebar background',
+  'note.coloursApplyToLight': 'Custom background colours apply to the light scheme only; dark keeps the built-in dark palette.',
   'field.uiLatin': 'Interface typeface',
   'field.uiCjk': 'CJK interface typeface',
   'field.code': 'Code and monospace typeface',

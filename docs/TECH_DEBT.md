@@ -16,7 +16,8 @@
 
 - **statistics**：缺少跨会话真实用量接口；新增前先确定 Host 数据边界，不能使用示例数字。
 - **tool-calls**：当前保留原生展示与展开，高级概要、子调用分组和交互重构后置。
-- 深色模式、Windows／Linux、其他 DSH 版本适配（背景色目前只写 light／dark 同值，深色下不保证可读）。
+- Windows／Linux、其他 DSH 版本适配。
+- 按模式各配一套背景色：当前自定义画布／侧栏只作用于浅色，深色固定用内置深色调色板（`BUILT_IN_DARK`）。要给深色也开放配置，需要新增成对的 YAML 字段，并决定深色派生色用哪套比例。
 - 更多可配色表面：卡片与代码块背景、文字与强调色、链接色（当前只有会话画布与侧栏两项可配）。
 - 配置页只有「行配置页」一个入口；「设置 → 通用」的快捷行、内置配色预设与字体下拉后置。
 - 聚合原生功能的「更多」入口、CCD 专有导航与快捷键。
@@ -43,6 +44,7 @@
 - 统计短读数依赖宿主当前标签格式：速率取带 `/` 的一段，用量取带 `%` 的缓存命中份额，两者都不存在时回退首段；升级或换语言后核对分段规则。视图与统计观察器覆盖文档子树；若流式输出出现可测量开销，再缩小观察范围。
 - 助手表格卡片依赖宿主表格的 computed style 事实（`border-collapse: collapse`、`13px/22px`、`th`／`td` 的 `padding: 10px 16px 10px 0`、`th` 下边框与列对齐）；这些规则来自构建期 CSS Modules，`document.styleSheets` 里取不到，升级后按运行中的 computed style 核对。
 - 尾侧簇的等距依赖宿主 trailing 组的两个结构事实：`.yhfFVG_activity` 空座位（`display: contents` 包装让宿主自己的 `:empty` 失效）与 `.yhfFVG_standardControls` 的分组；升级后核对 activity 是否仍以 `yhfFVG_activity`／`yhfFVG_activityExpanded` 区分空载与展开。
+- 深色依赖宿主主题服务的三件事：presenter 写 `body[data-ds-dark-theme]`、`getTheme()`／`setTheme()` 是偏好读写入口、`theme/change` 是变更信号。升级后核对这枚属性与成员名；属性改名会让插件深色块失效（内联的宿主 token 覆盖仍会按配色成对下发），成员缺失时配置页不显示主题行。
 - 被遮挡窗口会节流动画帧；滑块数值和减少动态效果行为已有验证，平滑程度没有逐帧录屏证据。
 - 同路径 `file:` tarball 可能复用旧包；按 [安装指南](../install.md) 使用唯一路径，并保留 profile 或配置备份引用的 tarball。
 - `link:` 安装会重新解析被链接仓库依赖，可能清理其 `node_modules`；优先使用安装包。

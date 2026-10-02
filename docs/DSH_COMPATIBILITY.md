@@ -53,6 +53,14 @@ DSH 不自动渲染 volatile 表单：`dsh-settings` 的 `autoGenerate` 目前�
 - **不用原生 `<datalist>`**：它的下拉是 OS 控件，既不吃本页样式，在桌面窗口里滚轮也不滚动（用户实测 258 项无法滚动），因此候选菜单由插件自绘（无边框圆角卡片 + 阴影 + 与下拉框行首对齐 + 搜索 + 260px 滚动区，当前项在行尾带蓝色 ✓），滚动、搜索、键盘都由本页负责；菜单用固定定位并跟随锚点矩形重定位，滚动时不关闭——把菜单打开的那次点击之后还会到达一个"滚动进视野"的事件，监听滚动关闭会让菜单刚开就消失。
 - 开关与下拉框同样自绘：宿主 `Switch`／`SegmentedControl` 等来自 `@deepseek-ai/dsh-client-ui-primitives`，该包不在本项目的类型基线内（本机未安装类型），引入它会新增依赖并让包检查夹具需要额外桩；自绘件只复用宿主设置页的形状与 token——开关 36×20 胶囊、16px 滑块，开启态用宿主的蓝色静态 token `--dsw-static-blue-450`（浅色与深色都定义在宿主基础调色板里），关闭态 `--dsw-alias-border-l3`，滑块 `--dsw-alias-switch-thumb`／`--dsw-alias-label-primary-foreground`；下拉框用 `--dsw-alias-border-l2`、`--dsw-radius-sm`、`--dsw-elevation-prominent`。
 
+## 默认界面字体与 Geist（2026-10-03）
+
+- 界面默认栈的唯一来源是 `src/client/theme/tokens.css` 的 `--ccd-font-fallback`；现在它以 `Geist` 打头。未安装该族时由 CSS 直接落到后面的平台栈，不需要 JS 兜底——`theme/tokens.ts` 只在用户配置了族名时前置，不复制字体清单。
+- Geist 是 Anthropic Sans 的上游设计（`Anthropic Sans` 的字体厂商字段为 `BSPK x Geist x Anthropic`），按 SIL OFL 1.1 分发：仓库放 `assets/fonts/Geist-Variable.ttf`（上游 `Geist[wght].ttf` 的逐字节副本，仅改文件名）与 `assets/fonts/OFL.txt`。它**不在** `package.json` 的 `files` 白名单里，因此 npm 包体积与 `check:package` 的 54 文件清单都不变，只服务"从仓库安装"这条路径。
+- **为什么附 TTF 而不是 woff2**：macOS／CoreText 安装字体只认 TTF／OTF／TTC，网页用的 woff2 复制进 `~/Library/Fonts` 不会被识别。
+- **字体只在应用启动时枚举**：把文件拷进 `~/Library/Fonts/` 后需要正常重启 DSH，⌘R 重载界面看不到新字体；配置页候选清单同样在页面加载时抓取（与上一节同一条缓存语义）。
+- 参考字体 Anthropic Sans／Serif 仍不分发、不写进字体栈，只在本机自行安装时才可能被用户手动选进 `fonts.uiLatin`。
+
 ## 主题 token 覆盖（2026-10-02）
 
 `ctx.theme.overrideTokens(source, tokens)` 是插件改全局颜色与字体的入口。核实要点：
@@ -61,6 +69,9 @@ DSH 不自动渲染 volatile 表单：`dsh-settings` 的 `autoGenerate` 目前�
 - presenter 把 `snapshot.active.tokens` 逐个 `body.style.setProperty`，移除 layer 时清理，因此覆盖是内联在 `body` 上的：**插件样式表在 `html`／`:root` 上重设同名变量赢不了它**，引用宿主 token 的声明也必须落在 `body` 或更深，不能在 `html` 上转发。
 - 本插件下发的宿主 token：`--dsw-alias-bg-base`（会话画布）、`--dsw-specific-sidebar-fill`（侧栏）、`--dsw-alias-border-l3`（分隔线）、`--dsw-font-family`（界面字体栈）、`--ds-font-family-code`（代码字体栈）。字体 token 定义在 `ui-theme` 的基础样式（`:root`），不在「每元素重新声明」的遮蔽块里，因此 body 内联可胜出。
 - 覆盖 `--dsw-font-family` 会连带改变 `--dsw-font-family-brand` 的兜底（它是 `"Montserrat", var(--dsw-font-family)`）。右侧栏 xterm 终端（JS 选项 + canvas 量宽）、PDF／Excel／HTML 预览、KaTeX 公式与桌面原生欢迎窗不经过这些变量，插件不承诺覆盖它们。
+- **两套配色同时下发。** 每个条目都是 `{ light, dark }`，presenter 按解析后的配色取一侧内联到 `body`；未配置的 `--ccd-*` 不由这一层下发。因此插件的深色块写在 `body[data-ds-dark-theme]` 上而不是 `html` 上——覆盖是 body 内联，`html` 上的重设赢不了它（见上一条），深色变量必须落在同一层或更深才能被后代继承到。
+- **深色的信号来自宿主自己。** `@deepseek-ai/dsh-client-ui-theme` 的客户端样式用 `body[data-ds-dark-theme]` 切换整套 `--dsw-*`，插件只在这个属性下声明自己的深色变量，不新增开关；`system` 由宿主的 `prefers-color-scheme` 媒体查询解析（插件不读媒体查询）。
+- **偏好读写只有三个成员。** `ThemeRuntime.getTheme()` 读快照（`preference` 是持久值，`active` 是解析后的配色）、`setTheme(id)` 是唯一写入口、`theme/change` 是唯一变更信号；插件配置页的「外观 → 主题」就架在这三个成员上（`compat/adapter.ts`），写出的值落在 profile 的 `ui-theme` 条目里，与宿主自己的 Appearance 行共用一份状态。三者缺一即不渲染该行，不报错。升级时核对成员名与 `body[data-ds-dark-theme]` 这枚属性。
 
 ## 插槽、编辑器和恢复
 

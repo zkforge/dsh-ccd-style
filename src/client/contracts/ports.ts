@@ -1,7 +1,9 @@
 import type { Context } from '@deepseek-ai/cordis';
 import type {} from '@deepseek-ai/dsh-client-ui-renderer/client';
-import type { ThemeRuntime } from '@deepseek-ai/dsh-client-ui-theme/client';
+import type { ThemePreference, ThemeRuntime } from '@deepseek-ai/dsh-client-ui-theme/client';
 import type { UiWorkspace } from '@deepseek-ai/dsh-client-ui-workspace/client';
+
+export type { ThemePreference };
 
 export type Disposer = () => void;
 
@@ -103,9 +105,31 @@ export interface SidebarRightTabsPort {
 export interface HostServices {
   readonly slots: Context['slots'];
   readonly theme: Pick<ThemeRuntime, 'overrideTokens'>;
+  /**
+   * The native light／dark／system preference as the configuration page sees it,
+   * or null on a build whose theme service does not publish it. DSH owns the
+   * value (the user-settings document owns the durable preference and
+   * `prefers-color-scheme` answers for `system`), so the page reads and writes
+   * it instead of holding a copy.
+   */
+  readonly themePreference: ThemePreferencePort | null;
   readonly workspace: Pick<UiWorkspace, 'openSession' | 'openWorkspace' | 'startSession'>;
   /** The settings transport carrying this plugin's own configuration section. */
   readonly configForms: ConfigFormsPort;
+}
+
+/**
+ * Read／write face of the theme service's preference: the same members the
+ * official Appearance row uses (`getTheme`／`setTheme`／`theme/change`), so a
+ * second control cannot disagree with the first one.
+ */
+export interface ThemePreferencePort {
+  /** The persisted preference — never the resolved active theme. */
+  preference(): ThemePreference;
+  /** Switch the preference through the theme service's only write entry. */
+  set(preference: ThemePreference): void;
+  /** Observe preference, registry and OS-scheme changes; returns the releaser. */
+  subscribe(listener: () => void): Disposer;
 }
 
 export interface DomPort {
