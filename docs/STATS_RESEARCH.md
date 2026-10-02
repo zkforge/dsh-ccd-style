@@ -1,6 +1,6 @@
 # 新会话页统计卡片调研
 
-更新日期：2026-10-03。目标：在新建页复刻用户截图里的统计卡片（6 个统计格 + 贡献热力图 + 底部书比对文案），只保留卡片主体，不做 `Overview／Models` 标签页与 `All／30d／7d` 范围切换。**第一步（静态卡片）已落地**，实测数据与遗留问题见第十节；真实数据聚合尚未接。模块状态见 [实施状态](IMPLEMENTATION.md)。
+更新日期：2026-10-03。目标：在新建页复刻用户截图里的统计卡片（6 个统计格 + 贡献热力图 + 底部书比对文案），只保留卡片主体，不做 `Overview／Models` 标签页与 `All／30d／7d` 范围切换。**卡片与真实数据都已落地**：视觉实测见第十节，数据通路与实测数字见第十一节。模块状态见 [实施状态](IMPLEMENTATION.md)。
 
 ## 一、目标卡片的来源
 
@@ -178,12 +178,12 @@ hero 区的真实结构（据 `src/client/features/new-session/new-session.css` 
 - 其余候选仅作参考，不引入代码；`crush`（FSL-1.1-MIT）、`opencode`（AGPL-3.0）、`claudecodeui`（AGPL-3.0）明确不引入。
 - 本插件不新增运行时依赖：热力图用 CSS Grid 自绘，不引入 npm 组件。
 
-## 九、未决问题
+## 九、未决问题（已全部定案，2026-10-03）
 
-1. **挂载位置**：已定（自管容器，第六节实测）。渲染方式选了纯 DOM 构建，不扩 `BASELINE_MODULES`。
-2. **token 口径**：已定——`Total tokens` 与热力图强度统一用**含缓存命中**的供应商总量（`tokensRaw`）。
-3. **文案语言**：卡片文案是否中文化（含书单与书比对句式），还是照原版保持英文。当前沿用参考的英文句子。
-4. **首次扫描体验**：全部历史会话的首次折叠要几秒到几十秒，期间显示骨架（原始实现的骨架正是 6×44px + 120px + 12px）还是等就绪再出现，需要定。
+1. **挂载位置**：自管容器（第六节实测）。渲染方式为纯 DOM 构建，不扩 `BASELINE_MODULES`。
+2. **token 口径**：`Total tokens` 用**含缓存命中**的供应商总量——`totalTokens` 优先，缺失时 `inputTokens + outputTokens + cacheReadTokens + cacheWriteTokens`（`reasoningTokens` 是 `outputTokens` 的子集，不重复加）。这与宿主自己 `dsh-client-ui-chat` 的 `normalizeUsage` 一致（它把 `inputTokens` 命名为 `uncachedInputTokens`）。
+3. **文案语言**：保持参考的英文原句（含弯引号 `’` 与乘号 `×`）。
+4. **首次扫描体验**：不画骨架、不闪 0——快照尚未可用（`pending > 0` 且还没有任何产出）时不渲染卡片，等下一次轮询（0.6s）出数再出现。
 
 ## 十、静态卡片已落地（2026-10-03）
 
@@ -211,3 +211,57 @@ hero 区的真实结构（据 `src/client/features/new-session/new-session.css` 
 剩下的只有数据：
 
 1. **数据仍是样例值**：卡片显示的是参考截图里的数字，因此 `features.statistics` 保持默认关闭。接入 host 半的聚合后，把 `SAMPLE_STATS` 换成真实快照即可，卡片本身不需要改。
+
+## 十一、真实数据已接入（2026-10-03）
+
+数据全部由 Host 半折叠，浏览器半只读一个 JSON；卡片组件与几何没有改动，只把 `SAMPLE_STATS` 换成快照。
+
+### 通路
+
+| 层 | 位置 | 职责 |
+| --- | --- | --- |
+| 折叠单元 | `src/host/stats/unit.ts` | `ccdUsage` 投影单元：纯函数 `apply(state, event)`。`user/message` 且 `source.kind === 'user'` 记一次真人提示（按本地日／小时分桶）；`assistant/message` 记 token 总量并按最近一次 `request/header` 的 `provider/model` 归属；`seq < inheritedEventCount` 的事件是 fork 继承前缀，整段跳过 |
+| 聚合 | `src/host/stats/aggregate.ts` | 纯函数：会话数（有自己产出的才算）、提示数、token 总量、活跃天数、峰值小时（并列取最早）、最爱模型（排除 `unknown`）、按天序列（上限 366 天） |
+| 服务 | `src/host/stats/service.ts` | `ctx.inject(['sessionProjections','connection'])` 后注册单元与 `/api/ccd-stats`；存活会话走 `sessionProjections.snapshot`，冷会话走 `sessionProjectionCache.cachedSnapshot`，缺失时用读句柄折一次并写回检查点（4 路并发、失败 60s 冷却、逐会话容错） |
+| 契约 | `src/shared/stats.ts` | 路由常量、快照类型、浏览器侧的 `readStatsSnapshot()` 校验 |
+| 取数与视图 | `src/client/features/statistics/{source,view,books}.ts` | 轮询（`pending > 0` 2s、等待首帧 0.6s、就绪 30s）、参考的窗口与格式算法、书比对句式 |
+
+宿主 DSH 的接口细节（响应式配置 cell、投影 seam、鉴权路由、wire 视图的下发面）记在 [DSH 兼容边界](DSH_COMPATIBILITY.md#统计卡片的数据通道2026-10-03)。
+
+### 与参考的对齐
+
+第十节那套几何与配色不变。窗口算法按参考当前 bundle（`cc70f2bdf-oAbIMYEh.js` 的 `FO` 组件）核到逐条一致：
+
+```text
+end   = 今天 + (6 - 今天.getDay())        // 本周的周六
+start = end - 181 天                      // 正好 26 列
+行列   = 列内按周日→周六（列主序 column*7 + row）
+档位   = ratio === 0 ? 0 : 80 - ceil(ratio*4)*8   // 4/3/2/1 档
+未来   = 晚于今天的格子不着色（透明），不是空格子
+```
+
+数字格式保持参考的写法（`en-US`）：计数 `1,556`、token `493.1M`／`12k`／`1M`、小时 `11 AM`、无数据显示 `—`。书比对句与三分支照参考（`times >= 2` 用 `~{times}× more tokens than {book}`，否则 `about as many tokens as {book}`，一本书都不够时整行不渲染），随机取书一次一挂载。
+
+### 隔离实例实测（真实语料）
+
+隔离 home 里放的是用户真实会话库的**只读副本**（59 个会话、26 MB 压缩日志）＋已有的 `session_projcache`，走 `dsh --profile web`（与桌面同一套 bundle），Playwright Chromium 1382×875 @2x：
+
+| 场景 | 结果 |
+| --- | --- |
+| 全量冷启动第一响应 | 40 ms 返回 `{sessions: 0, pending: 59}`（不阻塞请求） |
+| 冷折完成 | 1 s 内 59/59 折完并写回 `ccdUsage` 检查点；卡片在 1.4 s 出现 |
+| 热启动 | 首响应即有数，卡片 0.6 s 出现 |
+| 稳定读数 | 会话 55、提示 136、token 1.070B、活跃 4 天、峰值 12 AM、最爱模型 `opencode-go/deepseek-v4.1-flash`；重复轮询逐项一致 |
+| 独立核对 | 直接汇总 59 条 `ccdUsage` 检查点：55 个工作会话、136 提示、1,070,017,050 token，与路由输出逐项吻合 |
+| 卡片几何 | 480×299、左上 (446,114)、问候块下缘 94 → 间距 20px、圆角 8、底色 `rgb(240,240,240)`、内边距 `8px 12px 12px`、182 格（四档各 1 格、其余为空） |
+| 控制台 | 0 pageerror（含被鉴权路由拒绝等异常路径） |
+
+暖启动没有 `pending` 时，路由 30 ms 内应答；冷启动期间浏览器按 `pending` 加快轮询，折完自然回落到 30s。
+
+### 取舍与已知边界
+
+- **wire 视图会被下发。** DSH 的会话列表与当前会话快照都带投影值，变更还会走 `session/controls` 变更流；`ccdUsage` 的 wire 值因此只放卡片要的稀疏数字（每会话约 100–200 B）。客户端生成的投影 schema 会丢弃未声明的键，不报错。
+- **聚合随插件启用常驻**，`features.statistics` 只控制卡片显示——这样在设置页打开统计不需要重启。插件整体关闭时不注册任何东西。
+- **删除的会话不再计入**：每轮刷新按当前会话列表重建，历史数字随之消失；这与"统计当前会话库"一致。
+- **另一个进程正在写的会话**（例如同时在跑 CLI）读到的是它上一次检查点，可能略旧；下次刷新自愈。
+- **未做**：`Overview／Models` 标签、`All／30d／7d` 范围切换、骨架屏、点击下钻。

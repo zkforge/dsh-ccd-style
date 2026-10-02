@@ -2,7 +2,7 @@
 
 更新日期：2026-10-02。本文件描述当前架构；各模块现状见 [实施状态](docs/IMPLEMENTATION.md)，验证状态见 [验证记录](docs/VERIFICATION.md)。
 
-插件消费 DSH 的配置、服务与界面插槽，输出可撤销的样式与展示组件。Workspace、Session、消息、输入编辑器与执行状态由 DSH 持有；本项目只拥有启用状态、设计变量、样式表、展示组件及其资源。模型与 effort 的展示控件共享官方 ModelDirectory，不拥有独立选择状态；顶栏尾侧新增的两个入口只转发官方右侧栏的页签动作，不持有面板布局；深浅两色（以及 `system`）同样由宿主的主题偏好驱动，插件只按当前配色下发对应的一套变量，不持有主题状态。四个界面 feature（shell、sidebar、new-session、conversation）已是 `implemented`；tool-calls 保留原生交互，statistics 因缺少真实全局用量接口保持关闭。
+插件消费 DSH 的配置、服务与界面插槽，输出可撤销的样式与展示组件。Workspace、Session、消息、输入编辑器与执行状态由 DSH 持有；本项目只拥有启用状态、设计变量、样式表、展示组件及其资源。模型与 effort 的展示控件共享官方 ModelDirectory，不拥有独立选择状态；顶栏尾侧新增的两个入口只转发官方右侧栏的页签动作，不持有面板布局；深浅两色（以及 `system`）同样由宿主的主题偏好驱动，插件只按当前配色下发对应的一套变量，不持有主题状态。五个界面 feature（shell、sidebar、new-session、conversation、statistics）已是 `implemented`；tool-calls 保留原生交互。DSH 没有跨会话的用量聚合接口，所以 statistics 的数据由 Host 半自己折叠：它注册一个会话投影单元（纯函数折叠每条会话日志），把跨会话聚合挂在 Host 已鉴权的 fetch 通道上，浏览器半只读一个 JSON。聚合状态只有一份（投影 seam 的水位缓存＋durable 检查点），插件不持有第二份会话或用量状态。
 
 ```mermaid
 flowchart LR
@@ -25,7 +25,7 @@ flowchart LR
 | 目录 | 职责 | 允许的依赖 |
 | --- | --- | --- |
 | `src/shared` | 插件身份、配置解析与 feature 标识 | 自身；不依赖宿主或 DOM |
-| `src/host` | Host 插件入口、Schemastery Config（`volatile` 字段进入设置表单） | shared、Host 运行依赖 |
+| `src/host` | Host 插件入口、Schemastery Config（`volatile` 字段进入设置表单）；`stats/` 是统计卡片的 Host 半：投影单元（纯折叠）、跨会话聚合（纯函数）、鉴权路由与冷会话补齐 | shared、Host 运行依赖、仅类型的 DSH 包 |
 | `src/client/contracts` | FeatureEnvironment、FeatureDefinition、服务与 DOM 端口、配置表单端口 | shared、SDK 类型；CleanupScope 仅类型引用 |
 | `src/client/core` | 通用清理和 feature 装配流程 | contracts、shared、core |
 | `src/client/compat` | 固定版本的服务接入、DOM 端口、宿主类名、动态几何与展示适配 | contracts、shared、compat |
@@ -50,7 +50,7 @@ flowchart LR
 
 **架构约束：颜色字面量只允许出现在 `theme/tokens.css`。** 派生色是算术结果（`theme/palette.ts` 的纯函数，深浅内置值也在这里，供 token 层成对下发），token 组合是纯函数（`theme/tokens.ts`），两者都可单测；其余样式表与组件只消费变量。深色块必须覆盖浅色块声明过的每一个颜色变量，由 `tests/theme-tokens.test.ts` 解析两张表核对。
 
-**架构约束：业务状态只有一个来源——DSH。** 插件不写 Session 日志，不扫描整段流式事件，也不建立第二套项目／会话状态。React 读取可变数据应使用 SDK 注入的标准 hooks；组件不能手工订阅或镜像宿主数据。
+**架构约束：业务状态只有一个来源——DSH。** 插件不写 Session 日志，也不建立第二套项目／会话状态。统计卡片的聚合是**派生读模型**：它由 Host 投影 seam 驱动（框架持有水位缓存与 durable 检查点），插件只提供纯折叠函数与一个只读路由，不落自己的快照文件。React 读取可变数据应使用 SDK 注入的标准 hooks；组件不能手工订阅或镜像宿主数据。
 
 **架构约束：资源必须可逆。** 注册返回值、监听器、样式、观察器、异步取消都通过 `scope.add()` 管理。改变原有内联样式或属性时必须记录并恢复：目前只有根属性 `data-dsh-ccd-style`、打开中的菜单上的 `data-ccd-account-menu` 标记与 `--ccd-account-name`（两者都只在菜单打开期间存在，关闭或释放时移除）、被翻转到锚点上方的菜单的 `data-ccd-menu-flipped` 标记与同一模块为它写入的内联 `max-height`（关闭或释放时恢复菜单自己的值），Composer 上的 `--ccd-trailing-width`／`--ccd-model-max-width`、统计按钮上的 `--ccd-stat-value`，打开方式控件上的 `data-ccd-open-mode` 与热区 `title`／`aria-label`、被覆盖主键的 `aria-hidden`／`tabindex`（释放时逐条按原值恢复），新会话默认提示语的现有 Text 节点与对应输入区 aria-label（仅在仍等于本插件写入的值时恢复），视图切换器轨道上的 `--ccd-view-x`／`--ccd-view-w`／`--ccd-view-duration`，以及正文滚动视口上的 `data-ccd-fade-top`／`data-ccd-fade-bottom` 与页面主体上的 `--ccd-fade-bottom-inset`。DOM 不存在时保留原生 UI（样式表本身是惰性的，可以先行挂载）。
 

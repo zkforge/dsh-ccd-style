@@ -95,6 +95,29 @@ TSX 接收 `locked`、`available`、目录标准 hook 与注册层回调；不�
 
 `HOST.modelSelectTrigger` 兼容原生按钮与 `[data-ccd-model-controls]`；统计几何把两个按钮作为完整选择组量测，保留现有名称限宽与 effort 不收缩行为。新浮层使用自有 dialog，通过 React effect 管理定位和交互，原生菜单翻转适配无需接管。
 
+## 统计卡片的数据通道（2026-10-03）
+
+**插件配置是响应式的。** `apply(ctx, config)` 拿到的不是普通对象：每个声明字段是一个带 `get()` 的 cell（官方先例 `this.config.selectedDefault.get()`）。直接读 `config.enabled` 会得到一个对象，配置门控会静默失效——本轮实测过。`src/host/index.ts` 的 `readValue()` 两种形态都接受，读不到就回落默认值。
+
+**Host 服务在 `apply` 时还没到齐。** include 树并行激活，我们的 `apply` 可能先于 `dsh-base`／`dsh-web-app` 层的条目执行：实测同一时刻 `ctx.get('sessionProjections')` 与 `ctx.get('connection')` 都是 `undefined`（`loader` 已在）。统计半因此用 `ctx.inject(['sessionProjections', 'connection'], scope => …)` 等这两个服务，缺任一个就整块不注册（等价缺失时卡片不出现），而不是在 `apply` 里直接取。
+
+**会话聚合走官方的投影 seam，不自建水位与快照。**
+
+| 用途 | 接口 |
+| --- | --- |
+| 注册纯折叠单元 | `ctx.sessionProjections.register({ key, stateSchema, init, apply, wire, stateVersion })`，注册是调用方 fiber 的 effect |
+| 存活会话读取 | `ctx.sessionProjections.snapshot(session, [key])`（帧内折叠，零 I/O） |
+| 冷会话读取 | `ctx.sessionProjectionCache.cachedSnapshot(header, [key])`（durable 检查点，零 I/O） |
+| 冷会话补齐 | `ctx.sessionPersistence.open(id,'read')` → `handle.read(0)` → `sessionProjectionCache.coldSnapshot(header, handle.inheritedEventCount, events)`，顺手写回检查点 |
+
+`stateSchema`／`viewSchema` 在类型上是 zod 的 `ZodType`，运行时只调用 `.parse`。本项目不新增运行时依赖，用两个本地读取函数（宽容、永不抛错）加一处注明的类型转换顶上；`zod` 只作为类型来源（它是 devDependency 的传递依赖，不进包）。
+
+**带 `wire` 的单元会离开 host。** 它的值随会话列表与当前会话快照下发，变更还会进 `session/controls` 变更流（`dsh-api-session-controller` 的 `onChanged` 订阅）。因此 wire 视图只放卡片需要的稀疏数值（每会话约 100–200 B）。客户端生成的投影 schema 是普通 zod object，未声明的键被丢弃而不是报错（`dsh-api-remotes/lib/client.js` 无 `.strict()`，本轮核实）。
+
+**供数路由用鉴权通道，不用裸 webServer。** `ctx.connection.fetch.register({ path: '/api/ccd-stats', methods: ['GET'], requestBody: 'buffered', fetch })`：carrier 先做 Host／Origin 与会话 cookie 校验，再交给 handler；`createSharedFetchHandler` 先查精确路由表再看 Typert 拦截器，同 path 二次注册直接抛错。官方先例：`/api/session.export`（`dsh-session-log-export`）、`/api/session/uploadFileBinary`（`dsh-client-file-upload`）。`ctx.webServer.register` 那条**没有鉴权**，只在没有 connection 的部署里才值得考虑，本插件不采用。
+
+**浏览器半的 `ctx.sessions` 不是 Host 的 `SessionStore`。** 它是 `dsh-api-session-controller` 的 client store（`subagentAddress` 等）。从 host 代码 `import type … from '@deepseek-ai/dsh-session'` 会把该包的 `Context` 增强带进同一个编译单元，浏览器半的 `sessions` 类型随之变错——本轮 `npm run typecheck` 抓到的正是这个。`features/model-controls/mount.ts` 因此用一处结构化声明（`ClientSessionList`）而不是 SDK 类型，来源写在注释里。
+
 ## 版本相关的 DOM 适配
 
 DSH 使用 CSS Modules，类名带构建哈希（例如侧栏 `_3WPZCG_`、会话 `ST7X_W_`、输入区 `yhfFVG_`、框架 `_6Qf49G_`）。这类选择器全部集中在 `src/client/compat/host-dom.ts`，逐条注明来源包与源文件。稳定锚点优先使用 `data-slot` 与 `data-*` 状态属性。

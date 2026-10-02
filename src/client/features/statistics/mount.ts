@@ -15,11 +15,19 @@
  * appended node survives React re-renders of the page (typing in the editor
  * does not remove it); leaving the hero phase unmounts the stack and the card
  * with it, which is why the observer re-creates it on the way back.
+ *
+ * The card appears only once {@link StatsSource} has a snapshot: a host
+ * without the aggregation (or with the statistics feature off) shows the
+ * native page untouched rather than an empty box.
  */
+import type { StatsSnapshot } from '../../../shared/stats.ts';
 import type { CleanupScope } from '../../core/cleanup.ts';
 import type { Logger } from '../../contracts/ports.ts';
 import { HOST } from '../../compat/host-dom.ts';
-import { SAMPLE_STATS, createStatsCard } from './card.ts';
+import type { StatsCardData } from './card.ts';
+import { createStatsCard } from './card.ts';
+import type { StatsSource } from './source.ts';
+import { buildCardData } from './view.ts';
 
 /**
  * The hero-phase conversation root. `data-phase` sits on the conversation root
@@ -34,14 +42,30 @@ const GAP_PX = 20;
 /** Custom property carrying that measured offset; CSS falls back to the default. */
 const GAP_PROPERTY = '--ccd-stats-gap';
 
+/** One draw for the footer's book choice, fixed for the lifetime of a mount. */
+function stableRandom(): () => number {
+  const pick = Math.random();
+  return () => pick;
+}
+
 /**
  * Keep one card mounted inside the hero stack.
  *
  * @param document - renderer document carrying the conversation page.
- * @param scope - cleanup scope owning the observer and the card node.
+ * @param scope - cleanup scope owning the observer, the subscription and the card node.
  * @param logger - sink for observer failures; the native page stays without a card.
+ * @param source - snapshot reader the card redraws from.
  */
-export function mountStatisticsCard(document: Document, scope: CleanupScope, logger: Logger): void {
+export function mountStatisticsCard(
+  document: Document,
+  scope: CleanupScope,
+  logger: Logger,
+  source: StatsSource,
+): void {
+  const random = stableRandom();
+  let snapshot: StatsSnapshot | null = source.current;
+  let rendered: StatsSnapshot | null = null;
+  let data: StatsCardData | null = null;
   let card: HTMLElement | null = null;
   let host: HTMLElement | null = null;
 
@@ -64,16 +88,21 @@ export function mountStatisticsCard(document: Document, scope: CleanupScope, log
   const sync = () => {
     const hero = document.querySelector<HTMLElement>(HERO);
     const stack = hero?.querySelector<HTMLElement>(HOST.heroComposerStack) ?? null;
-    if (stack === null) {
+    if (stack === null || snapshot === null) {
       remove();
       return;
+    }
+    if (data === null || rendered !== snapshot) {
+      data = buildCardData(snapshot, random);
+      rendered = snapshot;
+      remove();
     }
     if (card !== null && card.isConnected && host === stack) {
       measure();
       return;
     }
     remove();
-    card = createStatsCard(document, SAMPLE_STATS);
+    card = createStatsCard(document, data);
     stack.append(card);
     host = stack;
     measure();
@@ -93,8 +122,14 @@ export function mountStatisticsCard(document: Document, scope: CleanupScope, log
     return;
   }
 
+  const unsubscribe = source.subscribe(next => {
+    snapshot = next;
+    sync();
+  });
+
   scope.add(() => {
     observer?.disconnect();
+    unsubscribe();
     remove();
   });
 }

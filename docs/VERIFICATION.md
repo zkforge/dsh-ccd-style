@@ -2,6 +2,24 @@
 
 更新日期：2026-10-03。本文件保留当前验证结论与证据位置，源码检查、夹具和真实运行分开记录。已被后续修复取代的详细记录保存在 Git 提交 `ec55195` 中，可执行 `git show ec55195:docs/VERIFICATION.md` 查看。
 
+## 统计卡片接入真实数据（2026-10-03）
+
+Host 半注册 `ccdUsage` 投影单元折叠会话日志，浏览器半读 `/api/ccd-stats`。语料用用户真实会话库的**只读副本**（59 个会话、26 MB `session.jsonl.zstd`）＋其 `session_projcache` 检查点副本，隔离 home `.cache/verify/home-stats`（`dsh --profile web`，与桌面同一套 bundle），Playwright Chromium 1382×875 @2x，脚本 `/tmp/ccd-probe/probe-final.mjs`、`probe-cold.mjs`。
+
+| 场景 | 结果 |
+| --- | --- |
+| 冷启动第一响应（清空全部 `ccdUsage` 行后） | **40 ms** 返回 `{sessions: 0, pending: 59}`；请求不被折叠阻塞 |
+| 冷折完成 | **1 s 内** 59/59 会话折完并写回检查点，卡片 **1.4 s** 出现 |
+| 热启动 | 首响应即有数，卡片 **0.6 s** 出现；路由 30 ms 内应答 |
+| 读数稳定 | 会话 55／提示 136／token 1.070B／活跃 4 天／峰值 12 AM／最爱模型 `opencode-go/deepseek-v4.1-flash`，重复轮询逐项一致 |
+| 独立核对 | 直接汇总 59 条写回的 `ccdUsage` 检查点：55 个工作会话、136 提示、1,070,017,050 token —— 与路由输出逐项吻合 |
+| 卡片几何（真实数据下） | 480×299、左上 (446,114)、问候块下缘 94 → 间距 20、圆角 8、`rgb(240,240,240)`、`8px 12px 12px`、182 格（1–4 档各 1 格） |
+| 控制台 | 0 pageerror |
+
+排查中确认的三处宿主事实（细节见 [DSH 兼容边界](DSH_COMPATIBILITY.md#统计卡片的数据通道2026-10-03)）：插件配置是带 `get()` 的响应式 cell（直接读字段会拿到对象，门控静默失效）；`apply` 执行时 `sessionProjections` 与 `connection` 尚未就绪，需 `ctx.inject` 等待；浏览器半的 `ctx.sessions` 是 `dsh-api-session-controller` 的 client store，导入 host 的 `dsh-session` 类型会把它改错（`npm run typecheck` 抓到，已在 `model-controls/mount.ts` 用结构化声明修正）。
+
+本地检查：`npm run check` 全绿（typecheck／架构与颜色归属／93 项测试／构建／包内容 63 文件）。证据：`docs/verification/local/stats-card/stats-data-{cold,warm}.png` 与 `stats-data-card-{cold,warm}.png`（该目录按惯例不进 Git）。边界：隔离 Web profile 的只读副本，不是真实 Electron 窗口；本轮未在桌面端实跑（需要重启 DSH 才加载新构建）。
+
 ## 四列以上的表格超出 Composer 宽度（2026-10-03，已修）
 
 用户截图（2515×1667，按 1.79 设备像素/逻辑像素反算＝1293×833 逻辑窗口、默认 280px 侧栏）反映：拖动侧边栏时正文跟着缩、拖回后表格右缘超出居中的 Composer。逐列像素量与真实运行都指向**宿主自己的宽表格加宽**，与拖动无关。

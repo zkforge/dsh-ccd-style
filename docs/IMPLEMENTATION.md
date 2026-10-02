@@ -15,7 +15,7 @@
 | new-session | implemented | 开启 |
 | conversation | implemented | 开启 |
 | tool-calls | planned | 关闭 |
-| statistics | implemented（数据未接） | 关闭 |
+| statistics | implemented（Host 聚合 + 鉴权路由） | 关闭 |
 
 总开关 `enabled` 默认关闭。开启时挂载作用域样式与兼容适配，关闭时释放取得的资源；设置传输和清理流程见架构。
 
@@ -37,7 +37,7 @@
 - 工作区与 Agent 预设芯片同输入面板左边缘对齐，26px 高、8px 圆角、细边框。
 - 输入卡片最大宽度 770px。未选工作区时，仅输入面板显示虚线；选择工作区与编辑器禁用状态由宿主处理。
 - 默认提示语与正常聊天统一，中英文可见文本与 aria-label 同步；工作区或阻断提示优先。提示语单行省略，实际编辑器正常换行与增长。
-- 统计卡片（`statistics`，默认关闭）挂在问候块下方 20px 处、与标题左对齐（左缘取 `50% - Composer 卡宽 / 2`），宽 480px，三段结构与参考同构：header（`Overview` 胶囊，24px 高、`#e6e6e6`、13px medium）→ body（3×2 统计格，44px 高、`#dadada`、5px 圆角；26×7 贡献热力图，格距 3px、四档 `hsl(217 70% 72／64／56／48%)`；底部一行书比对文案，11/17、`pt-4`）；卡片顶到统计格顶约 41px（8px 内边距 + 24px header + 8px 间距），tiles／heat／文案同属 body、彼此 6px，与参考实测的松紧一致（参考卡片换算后约 303px 高，这里是 299px）。颜色取自 `theme/tokens.css` 的 `--ccd-stats-*`，深浅两套都在那里。问候块高度随字号与语言变化，所以卡片偏移由 `mount.ts` 实测问候块高度后写进 `--ccd-stats-gap`，不写死。DSH 的 hero 区只有 `conversation.hero.brand.mark／workspace／agent` 三个小座位，没有承载整块卡片的插槽，所以卡片自持容器：插进 `.ST7X_W_composerStack`（问候块的父容器）、与问候块共用绝对定位坐标系，`compat/host-dom.ts` 登记 `heroComposerStack` 锚点，`features/statistics/mount.ts` 用 MutationObserver 在 hero 阶段重建、离开阶段移除、释放时整体拆除。**当前只画到静态卡片**：数字是参考截图里的样例值，真实聚合未接，因此默认关闭；规格、数据方案与未决项见 [统计卡片调研](STATS_RESEARCH.md)。
+- 统计卡片（`statistics`，默认关闭）挂在问候块下方 20px 处、与标题左对齐（左缘取 `50% - Composer 卡宽 / 2`），宽 480px，三段结构与参考同构：header（`Overview` 胶囊，24px 高、`#e6e6e6`、13px medium）→ body（3×2 统计格，44px 高、`#dadada`、5px 圆角；26×7 贡献热力图，格距 3px、四档 `hsl(217 70% 72／64／56／48%)`；底部一行书比对文案，11/17、`pt-4`）；卡片顶到统计格顶约 41px（8px 内边距 + 24px header + 8px 间距），tiles／heat／文案同属 body、彼此 6px，与参考实测的松紧一致（参考卡片换算后约 303px 高，这里是 299px）。颜色取自 `theme/tokens.css` 的 `--ccd-stats-*`，深浅两套都在那里。问候块高度随字号与语言变化，所以卡片偏移由 `mount.ts` 实测问候块高度后写进 `--ccd-stats-gap`，不写死。DSH 的 hero 区只有 `conversation.hero.brand.mark／workspace／agent` 三个小座位，没有承载整块卡片的插槽，所以卡片自持容器：插进 `.ST7X_W_composerStack`（问候块的父容器）、与问候块共用绝对定位坐标系，`compat/host-dom.ts` 登记 `heroComposerStack` 锚点，`features/statistics/mount.ts` 用 MutationObserver 在 hero 阶段重建、离开阶段移除、释放时整体拆除。数据不再来自样例：Host 半注册 `ccdUsage` 投影单元（纯函数折叠每条会话日志：真人提示、含缓存命中的 token 总量、按天／按小时／按模型），用 `ctx.sessionProjectionCache` 的 durable 检查点做零 I/O 读取、缺失时后台冷折一次并写回，再把跨会话聚合挂在 `ctx.connection.fetch` 的 `/api/ccd-stats` 上；浏览器半按 `pending` 决定轮询节奏，首次全部冷折完成前不画卡片（避免闪一屏 0）。开关仍默认关闭：插件启用后聚合常驻，`features.statistics` 只控制卡片显示（不需要重启）。规格、数据方案与实现记录见 [统计卡片调研](STATS_RESEARCH.md)，验证见 [验证记录](VERIFICATION.md)。
 
 ## 聊天页与共用 Composer
 
@@ -74,7 +74,7 @@
 
 - 用户在侧栏「插件」→ `dsh-ccd-style` → 组件行 `ui-skin-ccd-style` 打开配置页；页面属于插件自己的行配置插槽，**关闭界面后仍然存在**，可以随时开回来。主题行也照常可用：它写的是宿主的偏好，不属于本插件的启用状态。
 - 界面上的可配置项只保留当前有意义的：总开关 `enabled`、四个已实现模块的开关、「外观 → 主题」、`appearance.canvas`／`appearance.sidebar`、`fonts.uiLatin`（界面字体）与 `fonts.code`（代码字体）。行里不放说明文字，页脚在没有写入时保持空白，只在写入中／已保存／被拒绝时出现一行状态；唯一的例外是两个背景色行下方那行灰色说明（`.ccd-settings-note`）：「自定义背景色只作用于浅色模式；深色模式使用内置深色调色板。」它说的是这对字段的作用域，所以挂在两行之后，而不是每行重复一次。
-- 只走 YAML 的进阶字段：`debug`（控制台排障日志）、`fonts.uiCjk`（西文与中文分开指定时才需要）、`features.tool-calls`（尚未实现）、`features.statistics`（卡片已实现、真实数据未接）。它们仍在 Host schema 里，配置页不展示。
+- 只走 YAML 的进阶字段：`debug`（控制台排障日志）、`fonts.uiCjk`（西文与中文分开指定时才需要）、`features.tool-calls`（尚未实现）、`features.statistics`（卡片与真实数据都已接，Host 聚合随插件启用常驻）。它们仍在 Host schema 里，配置页不展示。
 - **即时生效，没有保存按钮**：开关、色块、字体选择一改就提交一次原子 `mutate`，写入当前 profile 的 `cordis.patch.yml`；文本字段（十六进制色值、字体族名）在失焦或回车时提交，避免半截输入到达设置边界。页脚只留一行状态（即时生效说明／写入中／已保存／被拒绝），失败时不改动界面值。
 - 页面自己校验：颜色须为 `#rgb`／`#rrggbb`（提交前归一成小写六位），字体名只允许字母、数字、空格与 `._-`、长度 ≤64，非法值就地提示且不写盘；Host 的 schema `pattern` 是第二道闸，`adoptConfig` 对手改 YAML 兜底（永不抛错）。
 - 「外观 → 主题」是宿主主题偏好的另一个入口（跟随系统／浅色／深色三格，16px 图标按钮住在 92×32 的槽里，选中格抬起成 1px 描边的卡片）。槽与选中格读 `--ccd-track`／`--ccd-card`／`--ccd-border-soft`，并带宿主 token 兜底，因此启用时与参考图一致（浅色槽 #f3f3f2、选中格纯白；深色槽 #1f1e1d、选中格 #30302e），插件关闭时这页仍按宿主调色板可读。它读 `getTheme().preference`、写 `setTheme()`、订阅 `theme/change`，本身不保存任何值，也不会与宿主自己的 Appearance 行不一致；箭头键在组内移动选择并循环。
@@ -89,7 +89,7 @@
 
 ## 尚未实现
 
-`tool-calls` 保留原生展示，后续可从 `tool.call.toolview` 扩展；不能丢失执行、结果、失败、授权与子调用信息。`statistics` 的卡片视觉已按参考落地，但 DSH 没有官方的跨会话聚合接口，聚合需由插件自行折叠会话日志，**真实数据尚未接**，因此默认关闭；规格、可复用实现与挂载位置见 [统计卡片调研](STATS_RESEARCH.md)。其他待办集中在 TECH_DEBT。
+`tool-calls` 保留原生展示，后续可从 `tool.call.toolview` 扩展；不能丢失执行、结果、失败、授权与子调用信息。`statistics` 的卡片视觉与真实数据都已落地：DSH 没有官方的跨会话聚合接口，聚合由 Host 半折叠会话日志（投影单元 + 检查点 + 鉴权路由），因此默认关闭并在启用后常驻聚合；规格、可复用实现、口径与实测数字见 [统计卡片调研](STATS_RESEARCH.md)。其他待办集中在 TECH_DEBT。
 
 ## 开发与验证入口
 

@@ -1,7 +1,9 @@
 import z from '@deepseek-ai/schemastery';
+import type { Context } from '@deepseek-ai/cordis';
 import {
   DEFAULT_APPEARANCE, DEFAULT_FEATURES, DEFAULT_FONTS, FONT_NAME_MAX_LENGTH,
 } from '../shared/config.ts';
+import { mountStatistics } from './stats/service.ts';
 
 /** Same shapes the client normalizer accepts, so both boundaries agree. */
 const HEX_COLOUR = /^(#[0-9a-fA-F]{3}|#[0-9a-fA-F]{6})?$/;
@@ -56,5 +58,52 @@ export const Config = z.object({
   }).default({ ...DEFAULT_FONTS }).description('字体').volatile(),
 });
 
-/** Browser-only presentation: no Host business logic and no profile writes. */
-export function apply(): void {}
+/**
+ * One declared configuration field as the loader hands it over: DSH resolves a
+ * plugin's config into reactive cells, so the current value is read through
+ * `get()` rather than off the object (the same shape the host's own plugins
+ * read, e.g. `this.config.selectedDefault.get()`).
+ */
+interface ConfigCell<T> {
+  get(): T;
+}
+
+/** The one Host field this half reads. */
+interface HostConfig {
+  readonly enabled?: ConfigCell<boolean> | boolean;
+}
+
+/** Read one reactive cell, or a plain value if a deployment resolves the config eagerly. */
+function readValue<T>(node: ConfigCell<T> | T | undefined, fallback: T): T {
+  if (node === undefined) return fallback;
+  if (typeof node === 'object' && node !== null && typeof (node as ConfigCell<T>).get === 'function') {
+    try {
+      return (node as ConfigCell<T>).get();
+    } catch {
+      return fallback;
+    }
+  }
+  return node as T;
+}
+
+/**
+ * Host half: the configuration surface the interface reads, plus the read-only
+ * session-log fold behind the statistics card.
+ *
+ * The card's numbers come from a projection unit of the host's own session
+ * projection seam (see `stats/unit.ts`) and are served over the host's
+ * authenticated fetch registry; nothing is written back to a profile, a
+ * session log, or any second state store.
+ *
+ * Registration follows the plugin switch alone: while the plugin is on, the
+ * fold and the route are live, so turning the statistics *feature* on in the
+ * settings page shows the card without a restart. Turning the plugin itself
+ * off costs the host nothing, because nothing is registered at all.
+ *
+ * @param ctx - host plugin context.
+ * @param config - resolved Host configuration cells (validated by the loader).
+ */
+export function apply(ctx: Context, config: unknown): void {
+  const host = (typeof config === 'object' && config !== null ? config : {}) as HostConfig;
+  mountStatistics(ctx, () => readValue(host.enabled, false) === true);
+}

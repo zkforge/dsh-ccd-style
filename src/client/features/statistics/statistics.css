@@ -140,6 +140,11 @@ html[data-dsh-ccd-style="true"] [data-ccd-stats-card] .ccd-stats-heat-cell[data-
   background: var(--ccd-stats-heat-4);
 }
 
+/* Days after today: the reference draws no cell at all there. */
+html[data-dsh-ccd-style="true"] [data-ccd-stats-card] .ccd-stats-heat-cell[data-level="future"] {
+  background: transparent;
+}
+
 html[data-dsh-ccd-style="true"] [data-ccd-stats-card] .ccd-stats-note {
   margin: 0;
   padding-top: 4px;

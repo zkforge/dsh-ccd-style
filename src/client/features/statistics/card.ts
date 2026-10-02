@@ -34,7 +34,10 @@ export interface StatsCardData {
   readonly tiles: readonly StatsTile[];
   /** 182 heat levels, 0 = no activity, 1-4 = one of the four steps. */
   readonly heat: readonly number[];
-  readonly note: string;
+  /** First cell drawn after today: the reference leaves those transparent. */
+  readonly futureFrom?: number;
+  /** Footer sentence, or null when the reference would draw none. */
+  readonly note: string | null;
 }
 
 /**
@@ -103,43 +106,23 @@ export function createStatsCard(document: Document, data: StatsCardData): HTMLEl
       const index = column * HEAT_ROWS + row;
       const cell = document.createElement('span');
       cell.className = 'ccd-stats-heat-cell';
-      cell.dataset.level = String(data.heat[index] ?? 0);
+      const future = data.futureFrom !== undefined && index >= data.futureFrom;
+      cell.dataset.level = future ? 'future' : String(data.heat[index] ?? 0);
       col.append(cell);
     }
     heat.append(col);
   }
 
-  const note = document.createElement('p');
-  note.className = 'ccd-stats-note';
-  note.textContent = data.note;
-
   /* The footer sentence belongs to the body group, not to the card's own
-     20px rhythm: the reference keeps ~12px between the heatmap and that line. */
-  body.append(tiles, heat, note);
+     20px rhythm: the reference keeps ~12px between the heatmap and that line.
+     A total too small for any book drops the line entirely. */
+  body.append(tiles, heat);
+  if (data.note !== null) {
+    const note = document.createElement('p');
+    note.className = 'ccd-stats-note';
+    note.textContent = data.note;
+    body.append(note);
+  }
   card.append(header, body);
   return card;
 }
-
-/**
- * Stand-in data for the layout pass: the numbers the reference screenshot
- * shows, so the static card can be measured against it before the host half
- * folds real sessions. Replaced by real aggregates in the data step.
- */
-export const SAMPLE_STATS: StatsCardData = {
-  tabs: ['Overview'],
-  tiles: [
-    { label: 'Sessions', value: '10' },
-    { label: 'Messages', value: '1,556' },
-    { label: 'Total tokens', value: '493.1M' },
-    { label: 'Active days', value: '3' },
-    { label: 'Peak hour', value: '11 AM' },
-    { label: 'Favorite model', value: 'deepseek/deepseek-v4' },
-  ],
-  heat: Array.from({ length: HEAT_COLUMNS * HEAT_ROWS }, (_, index) => {
-    const column = Math.floor(index / HEAT_ROWS);
-    const row = index % HEAT_ROWS;
-    if (column < HEAT_COLUMNS - 1 || row < 1 || row > 3) return 0;
-    return [1, 2, 4][row - 1] ?? 0;
-  }),
-  note: "You've used ~4008× more tokens than The Hobbit.",
-};
