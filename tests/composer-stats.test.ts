@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
-import { mountComposerStats, TRAILING_WIDTH_PROPERTY, MODEL_MAX_WIDTH_PROPERTY, STAT_VALUE_PROPERTY } from '../src/client/compat/stats-values.ts';
+import { mountComposerStats, TRAILING_WIDTH_PROPERTY, MODEL_MAX_WIDTH_PROPERTY, STAT_VALUE_PROPERTY, CLUSTER_GAP_PROPERTY } from '../src/client/compat/stats-values.ts';
 import { HOST } from '../src/client/compat/host-dom.ts';
 
 /** DOM double for frame-style invalidation, not a browser geometry assertion. */
@@ -54,7 +54,7 @@ function fixture() {
     }, configurable: true,
   });
   Object.defineProperty(globalThis, 'getComputedStyle', {
-    value: () => ({ paddingLeft: '4px', paddingRight: '4px', columnGap: '12px', getPropertyValue: () => '10px' }),
+    value: () => ({ paddingLeft: '4px', paddingRight: '4px', columnGap: '12px', getPropertyValue: (key: string) => key === CLUSTER_GAP_PROPERTY ? '6px' : '' }),
     configurable: true,
   });
   const errors: unknown[] = [];
@@ -78,9 +78,9 @@ test('panel track and native model changes refresh the offset without a window r
   assert.equal(f.properties.get(TRAILING_WIDTH_PROPERTY), '96px');
   f.resizePanel(206);
   assert.equal(f.properties.get(TRAILING_WIDTH_PROPERTY), '206px');
-  assert.equal(f.properties.get(MODEL_MAX_WIDTH_PROPERTY), '286px');
+  assert.equal(f.properties.get(MODEL_MAX_WIDTH_PROPERTY), '290px');
   f.resizeRow(360);
-  assert.equal(f.properties.get(MODEL_MAX_WIDTH_PROPERTY), '146px');
+  assert.equal(f.properties.get(MODEL_MAX_WIDTH_PROPERTY), '150px');
   assert.deepEqual(f.errors, []);
   f.dispose();
 });
@@ -98,10 +98,12 @@ test('own property notifications settle without repeated writes and teardown rel
   assert.equal(f.statProperties.has(STAT_VALUE_PROPERTY), false);
 });
 
-test('wide readouts mirror the current rate or token count without changing native text', () => {
+test('wide readouts mirror the current rate or cache-hit share without changing native text', () => {
   const f = fixture();
   assert.equal(f.statProperties.get(STAT_VALUE_PROPERTY), '"210 tok/s"');
   f.changeStat('117M tok · 缓存命中 95%');
+  assert.equal(f.statProperties.get(STAT_VALUE_PROPERTY), '"缓存命中 95%"');
+  f.changeStat('117M tok');
   assert.equal(f.statProperties.get(STAT_VALUE_PROPERTY), '"117M tok"');
   f.changeStat('');
   assert.equal(f.statProperties.has(STAT_VALUE_PROPERTY), false);

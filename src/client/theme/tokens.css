@@ -14,6 +14,14 @@ html[data-dsh-ccd-style="true"] {
   --ccd-nav-gap: 2px;
   --ccd-radius-row: 8px;
   --ccd-radius-panel: 12px;
+  /* Assistant table card. The reference crop's corner curve fits a 12-device-px
+     radius at @2x, so the card is rounder than the row radius it borrows its
+     scale from. */
+  --ccd-table-radius: 6px;
+  /* Fenced code block card. The reference code block shows the same 12-device-px
+     curve at @2x as the table card, so the transcript's two boxed surfaces stay
+     one family. */
+  --ccd-code-radius: 6px;
   --ccd-composer-width: 770px;
   --ccd-composer-min-height: 42px;
   --ccd-composer-radius: 10px;
@@ -26,11 +34,30 @@ html[data-dsh-ccd-style="true"] {
   --ccd-control-row-height: 28px;
   --ccd-send-size: 24px;
   --ccd-send-reserve: 30px;
-  --ccd-dock-gap: 10px;
+  /* One gap for every control in the Composer's trailing cluster — the two
+     native readouts, the context ring and the model/effort pair. Each control
+     carries its own 6-7px inner padding, so an even box gap also reads as an
+     even visible rhythm, and the cluster's last button lands on the row's right
+     content edge. */
+  --ccd-cluster-gap: 6px;
   --ccd-account-menu-width: 236px;
   --ccd-account-menu-padding: 5px;
   --ccd-account-row-height: 28px;
   --ccd-account-trigger-height: 30px;
+  /* Conversation header action cluster. The CCD reference keeps every control
+     on one 30px centre pitch with a 12px trailing inset (measured at @2x from
+     docs/reference/ccd-conversation.png: icon centres 28.75/30/30px apart, the
+     trailing glyph centre 25.75px from the window edge). */
+  --ccd-header-action-size: 28px;
+  --ccd-header-action-compact: 24px;
+  --ccd-header-icon-size: 16px;
+  --ccd-header-action-gap: 2px;
+  --ccd-header-trailing-inset: 12px;
+  --ccd-header-trailing-inset-compact: 8px;
+  /* Transcript edge fade. 24px is the band the host's own internal-request
+     viewer uses for `fadeTop`／`fadeBottom`, so the whole interface softens its
+     scroll viewport edges by the same amount. */
+  --ccd-edge-fade: 24px;
 
   /* Surfaces */
   --ccd-canvas: #fcfcfb;
@@ -47,6 +74,9 @@ html[data-dsh-ccd-style="true"] {
   --ccd-border: #e3e3e1;
   --ccd-border-strong: #e0e0df;
   --ccd-border-soft: #ebebe9;
+  /* The rule under a table head reads one step stronger than the card outline
+     in the reference (#d9d9d9 against #e3e3e3). */
+  --ccd-table-head-line: #d9d9d8;
 
   /* Text */
   --ccd-text: #1f1f1d;
@@ -54,14 +84,25 @@ html[data-dsh-ccd-style="true"] {
   --ccd-text-muted: #8f8f8a;
   --ccd-text-placeholder: #89877f;
 
+  /* Assistant Markdown palette matched to the CCD transcript reference. */
+  --ccd-link: #2b61b5;
+  --ccd-link-underline: #a7badd;
+  --ccd-inline-code-text: #b63630;
+  --ccd-inline-code-fill: #f1f1f0;
+  --ccd-inline-code-border: #e2e2e0;
+
   /* State colours that DSH already owns semantics for. */
   --ccd-diff-added: #508c48;
   --ccd-diff-removed: #b33156;
 
-  /* Type */
-  --ccd-font-ui: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Helvetica Neue",
+  /* Type. The two fallback tails are what a configured family is prepended to
+     (see theme/tokens.ts); with nothing configured the consuming variables keep
+     the built-in stacks. */
+  --ccd-font-fallback: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Helvetica Neue",
     "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", sans-serif;
-  --ccd-font-code: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace;
+  --ccd-code-fallback: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace;
+  --ccd-font-ui: var(--ccd-font-fallback);
+  --ccd-font-code: var(--ccd-code-fallback);
   --ccd-font-size-body: 14px;
   --ccd-font-size-muted: 13px;
   --ccd-font-size-headline: 26px;
@@ -75,7 +116,73 @@ html[data-dsh-ccd-style="true"] {
   --ccd-icon-send: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16' fill='none'%3E%3Cpath d='M6.97211 1.94476C7.55785 1.35914 8.50767 1.35919 9.09343 1.94476L13.921 6.77228L13.2138 7.47939L8.38632 2.65187C8.19108 2.45682 7.87443 2.45677 7.67922 2.65187L2.74397 7.58711L2.03687 6.88L6.97211 1.94476Z' fill='black'/%3E%3Cpath d='M7.97571 14.5732L8.02421 2.34139' stroke='black' stroke-width='1'/%3E%3C/svg%3E");
   --ccd-icon-stop: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Cpath d='M12.5 2.5H3.5C2.94772 2.5 2.5 2.94772 2.5 3.5V12.5C2.5 13.0523 2.94772 13.5 3.5 13.5H12.5C13.0523 13.5 13.5 13.0523 13.5 12.5V3.5C13.5 2.94772 13.0523 2.5 12.5 2.5Z' fill='black'/%3E%3C/svg%3E");
 
+  /* The header's three painted glyphs, taken from DSH 0.2.0-rc.2 shared
+     artwork (MIT) so no host component is copied:
+     - IconRightUpOutlineRegular (`ui-primitives/icons`) is the generic "open"
+       glyph the native open-in-app control falls back to;
+     - the terminal prompt is `ui-sidebar-terminal/TerminalIcon`'s own 16px
+       geometry, the glyph that view's tab title draws;
+     - the globe is `ui-primitives`' IconGlobeOutlineRegular, the glyph
+       `ui-sidebar-browser` draws in its tab title.
+     Masks let the host keep ownership of its buttons while the plugin supplies
+     the artwork. */
+  --ccd-icon-open: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16' fill='none'%3E%3Cpath d='M11.7256 2.77441C12.5538 2.77469 13.2256 3.44616 13.2256 4.27441V10.1416H12.2256V4.27441C12.2256 3.99844 12.0015 3.77469 11.7256 3.77441H5.7207V2.77441H11.7256Z' fill='black'/%3E%3Cpath d='M2.77441 13.2255L12.3756 3.62427' stroke='black'/%3E%3C/svg%3E");
+  --ccd-icon-terminal: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16' fill='none'%3E%3Cpath d='M3 4L7 8L3 12' stroke='black'/%3E%3Cpath d='M9 12H13' stroke='black'/%3E%3C/svg%3E");
+  --ccd-icon-browser: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16' fill='none'%3E%3Cpath d='M7.99986 14.0887C11.3626 14.0887 14.0886 11.3627 14.0886 7.99998C14.0886 4.63727 11.3626 1.91125 7.99986 1.91125C4.63715 1.91125 1.91113 4.63727 1.91113 7.99998C1.91113 11.3627 4.63715 14.0887 7.99986 14.0887Z' stroke='black'/%3E%3Cpath d='M2.34619 8H13.6538' stroke='black' stroke-linecap='square'/%3E%3Cpath d='M7.99976 14.0889C9.23509 14.0889 10.1743 11.3629 10.1743 8.00006C10.1743 4.63739 9.23509 1.91138 7.99976 1.91138' stroke='black'/%3E%3Cpath d='M7.99973 14.0889C6.76445 14.0889 5.8252 11.3629 5.8252 8.00006C5.8252 4.63739 6.76445 1.91138 7.99973 1.91138' stroke='black'/%3E%3C/svg%3E");
+
   /* Elevation */
   --ccd-shadow-card: 0 1px 2px rgb(0 0 0 / 4%);
   --ccd-shadow-segment: 0 1px 2px rgb(0 0 0 / 8%);
+}
+
+/* zanwei effort reference palette, MIT; canvas reads these theme values. */
+html[data-dsh-ccd-style="true"] {
+  --ccd-effort-color-1: #8c73c9;
+  --ccd-effort-color-2: #a17ec2;
+  --ccd-effort-color-3: #5f5b58;
+  --ccd-effort-color-4: #3f3b38;
+  --ccd-effort-color-5: #77736f;
+  --ccd-effort-color-6: #edeae8;
+  --ccd-effort-color-7: #e0dbd6;
+  --ccd-effort-color-8: #ffffff;
+  --ccd-effort-color-9: rgba(76, 70, 65, 0.12);
+  --ccd-effort-color-10: #2788d6;
+  --ccd-effort-color-11: rgba(62, 56, 50, 0.05);
+  --ccd-effort-color-12: rgba(62, 56, 50, 0.04);
+  --ccd-effort-color-13: rgba(62, 56, 50, 0.06);
+  --ccd-effort-color-14: #74706d;
+  --ccd-effort-color-15: rgba(82, 76, 70, 0.055);
+  --ccd-effort-color-16: rgba(76, 70, 65, 0.1);
+  --ccd-effort-color-17: #34312f;
+  --ccd-effort-color-18: rgba(35, 31, 29, 0.12);
+  --ccd-effort-color-19: #fff;
+  --ccd-effort-color-20: rgba(70, 64, 59, 0.035);
+  --ccd-effort-color-21: #eeebe9;
+  --ccd-effort-color-22: #ece9e7;
+  --ccd-effort-color-23: #e2dce3;
+  --ccd-effort-color-24: #d9d0df;
+  --ccd-effort-color-25: #d0c1da;
+  --ccd-effort-color-26: #cdbcd9;
+  --ccd-effort-color-27: #cbbad8;
+  --ccd-effort-color-28: #d5cadc;
+  --ccd-effort-color-29: #c8b5d4;
+  --ccd-effort-color-30: #bda6cc;
+  --ccd-effort-color-31: #b59bc6;
+  --ccd-effort-color-32: #b6b2af;
+  --ccd-effort-color-33: rgba(76, 70, 65, 0.13);
+  --ccd-effort-color-34: rgba(62, 56, 50, 0.08);
+  --ccd-effort-color-35: rgba(62, 56, 50, 0.055);
+  --ccd-effort-pixel-leftColor: 210, 206, 214;
+  --ccd-effort-pixel-deepViolet: 156, 120, 192;
+  --ccd-effort-pixel-deepMid: 156, 132, 192;
+  --ccd-effort-pixel-midPurple: 168, 144, 204;
+  --ccd-effort-pixel-softMid: 168, 156, 204;
+  --ccd-effort-pixel-softLilac: 180, 168, 204;
+  --ccd-effort-pixel-paleCool: 192, 180, 204;
+  --ccd-effort-pixel-highlightColor: 216, 204, 228;
+  --ccd-effort-pixel-peakColor: 232, 224, 242;
+}
+
+html[data-dsh-ccd-style="true"] {
+  --ccd-effort-shadow: 0 1px 2px rgba(62, 56, 50, .05), 0 4px 10px rgba(62, 56, 50, .04), 0 12px 28px rgba(62, 56, 50, .06);
 }

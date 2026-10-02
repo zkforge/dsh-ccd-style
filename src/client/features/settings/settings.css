@@ -1,0 +1,334 @@
+/*
+ * Row configuration page.
+ *
+ * The page is drawn on the host's own settings surface and stays readable in
+ * both plugin states, so it consumes host `--dsw-*` tokens only: while the
+ * plugin is enabled the theme layer has already pointed the surfaces and fonts
+ * that matter at the configured values, and while it is disabled the page still
+ * renders (that is how the interface is switched back on).
+ *
+ * Layout is one column of cards capped at a readable measure: the Plugins panel
+ * is wide, and a settings form stretched across it is hard to scan.
+ */
+
+.ccd-settings-page {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  max-width: 760px;
+  margin-top: 16px;
+  padding-bottom: 24px;
+  color: var(--dsw-alias-label-primary);
+  font: var(--dsw-font-s-14);
+}
+
+.ccd-settings-summary {
+  color: var(--dsw-alias-label-secondary);
+}
+
+.ccd-settings-notice {
+  margin: 12px 0;
+  color: var(--dsw-alias-label-secondary);
+  font: var(--dsw-font-s-14);
+}
+
+.ccd-settings-section {
+  display: flex;
+  flex-direction: column;
+  padding: 8px 0 4px;
+}
+
+.ccd-settings-section + .ccd-settings-section {
+  margin-top: 14px;
+}
+
+.ccd-settings-title {
+  margin: 0;
+  padding: 0 2px 4px;
+  color: var(--dsw-alias-label-primary);
+  font: var(--dsw-font-s-strong-14);
+}
+
+.ccd-settings-row {
+  display: grid;
+  grid-template-columns: minmax(180px, 1fr) auto;
+  align-items: center;
+  gap: 4px 12px;
+  min-height: 48px;
+  padding: 8px 0;
+}
+
+.ccd-settings-row + .ccd-settings-row {
+  border-top: .5px solid var(--dsw-alias-border-l2);
+}
+
+.ccd-settings-label {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.ccd-settings-name {
+  font: var(--dsw-font-s-14);
+}
+
+.ccd-settings-hint,
+.ccd-settings-note {
+  color: var(--dsw-alias-label-caption);
+  font: var(--dsw-font-xxs-12);
+}
+
+.ccd-settings-control {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
+/* Switch: the host's own dimensions and tokens (36×20 capsule, 16px thumb). */
+.ccd-settings-switch {
+  position: relative;
+  box-sizing: border-box;
+  flex: 0 0 auto;
+  width: 36px;
+  height: 20px;
+  padding: 2px;
+  border: 0;
+  border-radius: 999px;
+  background: var(--dsw-alias-border-l3);
+  cursor: pointer;
+  transition: background 120ms ease;
+}
+
+.ccd-settings-switch[aria-checked='true'] {
+  background: var(--dsw-static-blue-450);
+}
+
+.ccd-settings-thumb {
+  display: block;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: var(--dsw-alias-switch-thumb);
+  transition: transform 120ms ease, background 120ms ease;
+}
+
+.ccd-settings-switch[aria-checked='true'] .ccd-settings-thumb {
+  background: var(--dsw-alias-label-primary-foreground);
+  transform: translateX(16px);
+}
+
+.ccd-settings-text {
+  width: 220px;
+  height: 34px;
+  padding: 0 8px;
+  border: 1px solid var(--dsw-alias-border-l2);
+  border-radius: var(--dsw-radius-sm);
+  background: var(--dsw-alias-bg-layer-1);
+  color: inherit;
+  font: inherit;
+}
+
+.ccd-settings-text-short {
+  width: 108px;
+  font: var(--dsw-font-xs-13);
+}
+
+.ccd-settings-text[aria-invalid='true'] {
+  border-color: var(--dsw-alias-state-error-primary);
+}
+
+.ccd-settings-text:focus-visible,
+.ccd-settings-switch:focus-visible,
+.ccd-settings-button:focus-visible,
+.ccd-settings-button-quiet:focus-visible,
+.ccd-settings-menu-search:focus-visible,
+.ccd-settings-menu-item:focus-visible {
+  outline: 2px solid var(--dsw-alias-brand-primary);
+  outline-offset: 1px;
+}
+
+/* Quiet button: the bordered shape the host's own settings rows use. */
+.ccd-settings-button-quiet {
+  height: 34px;
+  padding: 0 12px;
+  border: 1px solid var(--dsw-alias-border-l2);
+  border-radius: var(--dsw-radius-sm);
+  background: none;
+  color: var(--dsw-alias-label-primary);
+  font: var(--dsw-font-xs-13);
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.ccd-settings-button-quiet:hover {
+  background: var(--dsw-alias-interactive-bg-hover);
+}
+
+/* Select box: one bordered box with the chevron inside it. */
+.ccd-settings-select {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  box-sizing: border-box;
+  width: 260px;
+  height: 34px;
+  padding: 0 12px;
+  border: .5px solid var(--dsw-alias-border-l2);
+  border-radius: var(--dsw-radius-md);
+  background: var(--dsw-alias-bg-layer-1);
+  color: var(--dsw-alias-label-primary);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.ccd-settings-select:hover {
+  background: var(--dsw-alias-interactive-bg-hover);
+}
+
+.ccd-settings-select[data-empty='true'] .ccd-settings-select-value {
+  color: var(--dsw-alias-label-caption);
+}
+
+.ccd-settings-select-value {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.ccd-settings-select > svg {
+  flex: 0 0 auto;
+  color: var(--dsw-alias-label-caption);
+}
+
+/* Installed-family menu, anchored to its select box. */
+.ccd-settings-menu {
+  position: fixed;
+  z-index: 1000;
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 8px;
+  border: 0;
+  border-radius: var(--dsw-radius-md);
+  background: var(--dsw-alias-bg-layer-2);
+  box-shadow: var(--dsw-elevation-prominent);
+}
+
+.ccd-settings-menu-search {
+  box-sizing: border-box;
+  width: 100%;
+  height: 34px;
+  padding: 0 10px;
+  border: .5px solid var(--dsw-alias-border-l2);
+  border-radius: var(--dsw-radius-md);
+  background: var(--dsw-alias-bg-layer-1);
+  color: inherit;
+  font: inherit;
+}
+
+.ccd-settings-menu-count,
+.ccd-settings-menu-empty {
+  margin: 0;
+  padding: 0 6px;
+  color: var(--dsw-alias-label-caption);
+  font: var(--dsw-font-xxs-12);
+}
+
+.ccd-settings-menu-list {
+  max-height: 260px;
+  margin: 0;
+  padding: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  scrollbar-width: thin;
+  list-style: none;
+}
+
+.ccd-settings-menu-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  min-height: 34px;
+  padding: 0 10px;
+  border: 0;
+  border-radius: var(--dsw-radius-md);
+  background: none;
+  color: var(--dsw-alias-label-primary);
+  font: var(--dsw-font-s-14);
+  text-align: left;
+  cursor: pointer;
+}
+
+.ccd-settings-menu-item[data-active='true'] {
+  background: var(--dsw-alias-interactive-bg-hover);
+}
+
+.ccd-settings-menu-name {
+  flex: 1 1 auto;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* The check closes the row and carries the switch's blue. */
+.ccd-settings-menu-check {
+  flex: 0 0 auto;
+  margin-left: auto;
+  color: var(--dsw-static-blue-450);
+  font-size: 13px;
+}
+
+.ccd-settings-status {
+  margin: 0;
+  padding: 0 2px;
+  color: var(--dsw-alias-label-secondary);
+  font: var(--dsw-font-xs-13);
+}
+
+/* Silent while nothing is being written. */
+.ccd-settings-status:empty {
+  display: none;
+}
+
+.ccd-settings-button {
+  height: 34px;
+  padding: 0 14px;
+  border: 0;
+  border-radius: var(--dsw-radius-md);
+  background: var(--dsw-alias-brand-primary);
+  color: var(--dsw-alias-label-primary-foreground);
+  font: var(--dsw-font-xs-strong-13);
+  cursor: pointer;
+}
+
+.ccd-settings-button-quiet {
+  border: 1px solid var(--dsw-alias-border-l2);
+  background: none;
+  color: var(--dsw-alias-label-primary);
+}
+
+.ccd-settings-button:disabled {
+  opacity: .5;
+  cursor: default;
+}
+
+@media (max-width: 620px) {
+  .ccd-settings-row {
+    grid-template-columns: 1fr;
+  }
+
+  .ccd-settings-control {
+    justify-content: flex-start;
+  }
+
+  .ccd-settings-text {
+    width: 100%;
+    min-width: 0;
+  }
+}

@@ -1,4 +1,5 @@
 import type { ImplementedFeature } from '../../contracts/feature.ts';
+import { mountConversationFade } from '../../compat/conversation-fade.ts';
 import { probeHost } from '../../compat/host-dom.ts';
 import { mountViewSwitch } from '../../compat/view-switch.ts';
 import conversationCss from './conversation.css';
@@ -12,6 +13,10 @@ import conversationCss from './conversation.css';
  * selected and how it is rendered, and this module only moves the tablist onto
  * the title line and publishes the selected segment's geometry so the
  * stylesheet can slide the thumb onto it.
+ *
+ * The transcript's own edge fade is published the same way: the host owns the
+ * scroll position, `compat/conversation-fade.ts` turns it into two attributes,
+ * and the stylesheet prints the stencil.
  */
 export const conversationFeature: ImplementedFeature = {
   id: 'conversation',
@@ -24,6 +29,10 @@ export const conversationFeature: ImplementedFeature = {
     scope.add(mountViewSwitch(
       document,
       error => environment.logger.error('conversation: view switcher observer failed', error),
+    ));
+    scope.add(mountConversationFade(
+      document,
+      error => environment.logger.error('conversation: transcript edge fade observer failed', error),
     ));
   },
 };

@@ -1,0 +1,137 @@
+import type { Disposer } from '../contracts/ports.ts';
+import { headerLabels } from './header-labels.ts';
+import { HOST } from './host-dom.ts';
+
+/** Attribute this module writes onto the host anchor; removed again on release. */
+const MODE_ATTRIBUTE = 'data-ccd-open-mode';
+
+/** What one anchor looked like before this module annotated it. */
+interface Annotation {
+  readonly chevron: HTMLElement;
+  readonly main: HTMLElement | null;
+  readonly title: string | null;
+  readonly label: string | null;
+  readonly hidden: string | null;
+  readonly tabindex: string | null;
+}
+
+/**
+ * Turn the native "open in app" split button into one generic glyph that opens
+ * the application menu.
+ *
+ * `ui-open-in-app/OpenTargetButton` renders two halves: `.iq4beG_main` launches
+ * the remembered application directly, and `.iq4beG_chevron` — the only control
+ * that opens the application menu — renders only while a menu exists. The
+ * stylesheet stretches that chevron over the whole box and paints shared artwork
+ * over both halves; it needs two facts from the DOM that CSS cannot express:
+ *
+ * 1. whether a menu exists at all. Without one the glyph would promise a
+ *    chooser that cannot appear, so the control is marked `direct` and hidden;
+ * 2. the stretched half's accessible name. The host names it from `path.more`
+ *    and the covered half from `path.open.title`, neither of which describes
+ *    what a click now does.
+ *
+ * Nothing is re-parented and no host callback is replaced: the menu, its items,
+ * its icon route and its failure toast stay entirely the host's.
+ *
+ * @param document - renderer document carrying the Conversation header.
+ * @param report - error sink owned by the caller's cleanup scope.
+ * @returns disposer restoring every attribute and marker this module wrote.
+ */
+export function mountOpenTargetMode(document: Document, report: (error: unknown) => void): Disposer {
+  /** Anchors carrying the mode marker, including the ones with no annotation. */
+  const marked = new Set<HTMLElement>();
+  const annotations = new Map<HTMLElement, Annotation>();
+
+  const restore = (entry: Annotation) => {
+    if (entry.title === null) entry.chevron.removeAttribute('title');
+    else entry.chevron.setAttribute('title', entry.title);
+    if (entry.label === null) entry.chevron.removeAttribute('aria-label');
+    else entry.chevron.setAttribute('aria-label', entry.label);
+    if (entry.main === null) return;
+    if (entry.hidden === null) entry.main.removeAttribute('aria-hidden');
+    else entry.main.setAttribute('aria-hidden', entry.hidden);
+    if (entry.tabindex === null) entry.main.removeAttribute('tabindex');
+    else entry.main.setAttribute('tabindex', entry.tabindex);
+  };
+
+  const release = () => {
+    for (const anchor of marked) anchor.removeAttribute(MODE_ATTRIBUTE);
+    marked.clear();
+    for (const entry of annotations.values()) restore(entry);
+    annotations.clear();
+  };
+
+  const sync = () => {
+    const copy = headerLabels(document);
+    for (const anchor of document.querySelectorAll<HTMLElement>(
+      `${HOST.conversationHeader} ${HOST.openTargetAnchor}`,
+    )) {
+      const chevron = anchor.querySelector<HTMLElement>(HOST.openTargetChevron);
+      const previous = annotations.get(anchor);
+      marked.add(anchor);
+      if (chevron === null) {
+        /* No menu: the split would direct-open, which is not what this glyph says. */
+        anchor.setAttribute(MODE_ATTRIBUTE, 'direct');
+        if (previous !== undefined) {
+          annotations.delete(anchor);
+          restore(previous);
+        }
+        continue;
+      }
+      anchor.setAttribute(MODE_ATTRIBUTE, 'menu');
+      if (previous !== undefined) {
+        /* React re-renders the anchor when the remembered application or the
+           locale changes, and would restore the host's own name over ours. */
+        if (chevron.getAttribute('aria-label') !== copy.open) chevron.setAttribute('aria-label', copy.open);
+        if (chevron.getAttribute('title') !== copy.open) chevron.setAttribute('title', copy.open);
+        continue;
+      }
+      const main = anchor.querySelector<HTMLElement>(HOST.openTargetMain);
+      annotations.set(anchor, {
+        chevron,
+        main,
+        title: chevron.getAttribute('title'),
+        label: chevron.getAttribute('aria-label'),
+        hidden: main?.getAttribute('aria-hidden') ?? null,
+        tabindex: main?.getAttribute('tabindex') ?? null,
+      });
+      chevron.setAttribute('title', copy.open);
+      chevron.setAttribute('aria-label', copy.open);
+      /* The covered half cannot act on a pointer click any more; leaving it in
+         the tab order would announce a launch the icon no longer performs. */
+      main?.setAttribute('aria-hidden', 'true');
+      main?.setAttribute('tabindex', '-1');
+    }
+    /* Session switches rebuild the header; records outlive their anchors. */
+    for (const [anchor, entry] of annotations) {
+      if (anchor.isConnected) continue;
+      annotations.delete(anchor);
+      marked.delete(anchor);
+      restore(entry);
+    }
+  };
+
+  const observer = new MutationObserver(() => {
+    try {
+      sync();
+    } catch (error) {
+      report(error);
+    }
+  });
+  try {
+    /* The header is rebuilt on session switches and the anchor's names are
+       React props, so names are re-checked rather than written once. `lang`
+       lives on the document element, hence that root rather than `body`. */
+    observer.observe(document.documentElement, {
+      childList: true, subtree: true, attributes: true, attributeFilter: ['lang', 'aria-label', 'title'],
+    });
+    sync();
+  } catch (error) {
+    observer.disconnect();
+    release();
+    report(error);
+    return () => {};
+  }
+  return () => { observer.disconnect(); release(); };
+}

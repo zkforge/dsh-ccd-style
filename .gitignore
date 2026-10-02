@@ -13,3 +13,5 @@ docs/reference/
 docs/verification/local/
 .verify/
 output/playwright/
+assets/CleanShot*.png
+.playwright-cli/

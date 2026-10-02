@@ -13,6 +13,13 @@ html[data-dsh-ccd-style="true"] .ST7X_W_header {
   background: var(--ccd-canvas);
   color: var(--ccd-text);
   /*
+   * The reference has no rule between the header and the transcript — the two
+   * read as one page. The host draws a hairline here (`border-bottom: .5px
+   * solid`), so it is painted out rather than removed: keeping the border's
+   * width leaves the header's own height untouched.
+   */
+  border-bottom-color: transparent;
+  /*
    * One header row. DSH stacks a title row and, below it, its View tablist; the
    * reference keeps every piece of header chrome on the title line. The two
    * wrapper boxes dissolve (`display: contents`) instead of being re-parented,
@@ -24,7 +31,7 @@ html[data-dsh-ccd-style="true"] .ST7X_W_header {
   /* The host reserves the second row only while its tablist is a row of its
      own; that row is gone, so its `min-height: 76px` goes with it. */
   min-height: 0;
-  padding: 10px 4px 10px 12px;
+  padding: 10px var(--ccd-header-trailing-inset) 10px 12px;
 }
 
 html[data-dsh-ccd-style="true"] .ST7X_W_headerBlank {
@@ -68,12 +75,29 @@ html[data-dsh-ccd-style="true"] .ST7X_W_headerActions {
 html[data-dsh-ccd-style="true"] .ST7X_W_headerUtilities {
   order: 3;
   margin-left: 0;
-  gap: 0;
+  /* One uniform gap, so every visible space in the cluster is equal. */
+  gap: var(--ccd-header-action-gap);
 }
 
 html[data-dsh-ccd-style="true"] .ST7X_W_headerCorner {
   order: 4;
-  margin-inline: 0;
+  /* The utilities group and the corner seat are siblings of the header itself,
+     which carries no gap: this margin is that last 2px step. */
+  margin: 0 0 0 var(--ccd-header-action-gap);
+}
+
+/*
+ * A Blank Session renders the corner seat alone — its only entry is the
+ * collapsed right panel's expand control — and the host keeps that one control
+ * on the trailing edge with `margin-left: auto` (`.headerBlank .headerCorner`,
+ * ConversationRoot.module.css). The rule above replaces that auto margin with
+ * the cluster's fixed step, which is right only while the row has a title and a
+ * utilities group to sit after. Without the auto margin the blank row's single
+ * button falls to the leading edge beside the window controls; the trailing
+ * edge here is the same 12px inset the populated row uses, so nothing moves.
+ */
+html[data-dsh-ccd-style="true"] .ST7X_W_headerBlank .ST7X_W_headerCorner {
+  margin-left: auto;
 }
 
 /*
@@ -189,14 +213,126 @@ html[data-dsh-ccd-style="true"] .ST7X_W_headerActions ._2tNPVa_trigger {
   padding-inline: 0;
 }
 
-/* Recover eight pixels at the trailing tools, keeping the readable group gaps
-   even in the collapsed macOS shell's 400px column. Icon sizes stay native. */
-html[data-dsh-ccd-style="true"] .ST7X_W_headerUtilities .iq4beG_main {
-  padding-inline: 3px;
+/*
+ * Trailing action cluster. Every control takes the same square hit box, so the
+ * visible gaps between glyphs are equal rather than only the box gaps: the
+ * previous build zeroed the host's `gap` and shrank single controls, which left
+ * ~7px after the split button but ~14px after the 24px menu button. Geometry is
+ * declared once in theme/tokens.css. The host's own 15px artwork stays native
+ * inside these boxes; the plugin only paints the three glyphs below.
+ *
+ * The renderer wraps every list entry in a `display: contents` seat
+ * (`[data-slot="conversation.session.header.utilities"]`), so the boxes are the
+ * seat's children — the seat itself has no box to size.
+ */
+html[data-dsh-ccd-style="true"] .ST7X_W_headerUtilities > [data-slot] > *,
+html[data-dsh-ccd-style="true"] .ST7X_W_headerCorner > [data-slot] > * {
+  box-sizing: border-box;
+  flex: none;
+  width: var(--ccd-header-action-size);
+  height: var(--ccd-header-action-size);
+  border-radius: var(--ccd-radius-row);
 }
 
 html[data-dsh-ccd-style="true"] .ST7X_W_headerUtilities .Da3aKq_moreButton {
-  width: 24px;
+  padding: 0;
+}
+
+/*
+ * The "open in app" control becomes one generic glyph whose whole box opens the
+ * native application menu. The chevron half — the only control that opens that
+ * menu — is stretched over the split box as the hit area, while the application
+ * image and the chevron glyph are replaced by shared artwork. The host keeps the
+ * menu, its items, its icon route and its callbacks; `compat/open-target.ts`
+ * marks the no-menu state, which hides this control instead of direct-opening.
+ */
+html[data-dsh-ccd-style="true"] .ST7X_W_headerUtilities .iq4beG_split {
+  position: relative;
+  box-sizing: border-box;
+  width: 100%;
+  height: 100%;
+  border: 0;
+  border-radius: inherit;
+  overflow: hidden;
+}
+
+html[data-dsh-ccd-style="true"] .ST7X_W_headerUtilities .iq4beG_chevron {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  width: 100%;
+  height: 100%;
+  padding: 0;
+  border: 0;
+  background: transparent;
+}
+
+html[data-dsh-ccd-style="true"] .ST7X_W_headerUtilities .iq4beG_chevron svg {
+  display: none;
+}
+
+html[data-dsh-ccd-style="true"] .ST7X_W_headerUtilities .iq4beG_chevron:hover:not(:disabled),
+html[data-dsh-ccd-style="true"] .ST7X_W_headerUtilities .iq4beG_chevron:focus-visible,
+html[data-dsh-ccd-style="true"] .ST7X_W_headerUtilities .iq4beG_main:hover:not(:disabled) {
+  background: var(--dsw-alias-interactive-bg-hover);
+}
+
+html[data-dsh-ccd-style="true"] .ST7X_W_headerUtilities .iq4beG_main {
+  width: 100%;
+  height: 100%;
+  gap: 0;
+  padding: 0;
+  color: var(--ccd-text-secondary);
+}
+
+html[data-dsh-ccd-style="true"] .ST7X_W_headerUtilities .iq4beG_main > * {
+  display: none;
+}
+
+html[data-dsh-ccd-style="true"] .ST7X_W_headerUtilities .iq4beG_main::before {
+  content: "";
+  width: var(--ccd-header-icon-size);
+  height: var(--ccd-header-icon-size);
+  background-color: currentColor;
+  mask: var(--ccd-icon-open) center / var(--ccd-header-icon-size) var(--ccd-header-icon-size) no-repeat;
+}
+
+/* No application menu exists (a directory with at most one candidate): a chooser
+   glyph would promise what the host cannot show, so the control stays away. */
+html[data-dsh-ccd-style="true"] .ST7X_W_headerUtilities [data-ccd-open-mode="direct"] {
+  display: none;
+}
+
+/*
+ * Narrow columns. The cluster keeps every control at 24px down to the collapsed
+ * macOS shell's 400px column; below 420px the two views this plugin adds step
+ * aside so the native team entry keeps its full label. Both views stay reachable
+ * from the right panel's own guide tab and from their shortcuts.
+ */
+@container ccd-conversation (max-width: 520px) {
+  html[data-dsh-ccd-style="true"] .ST7X_W_header {
+    padding-right: var(--ccd-header-trailing-inset-compact);
+  }
+
+  html[data-dsh-ccd-style="true"] .ST7X_W_headerUtilities > [data-slot] > *,
+  html[data-dsh-ccd-style="true"] .ST7X_W_headerCorner > [data-slot] > * {
+    width: var(--ccd-header-action-compact);
+    height: var(--ccd-header-action-compact);
+  }
+}
+
+@container ccd-conversation (max-width: 420px) {
+  html[data-dsh-ccd-style="true"] .ST7X_W_headerUtilities [data-ccd-header-view] {
+    display: none;
+  }
+
+  /* At this width the title, the View switcher, the native team entry and the
+     cluster cannot share one row. The title is the only piece the sidebar also
+     shows, so it yields — the same trade the collapsed macOS shell already
+     makes — and every native control keeps its full label. */
+  html[data-dsh-ccd-style="true"] .ST7X_W_header:not(.ST7X_W_headerBlank) .ST7X_W_crumbs {
+    display: none;
+  }
 }
 
 /* Transcript column keeps the reference's breathing room. */
@@ -205,10 +341,200 @@ html[data-dsh-ccd-style="true"] .icaHSq_scroll {
   padding-bottom: 8px;
 }
 
+/*
+ * Transcript edge fade. The host's internal-request viewer softens the edges
+ * of its scroll viewport with a 24px stencil and switches each side on only
+ * while that side still holds content; the transcript itself has never had it.
+ * `compat/conversation-fade.ts` publishes those two facts as attributes on the
+ * scroller, and these rules paint the stencil from them.
+ *
+ * It is painted, not masked. The resident Composer is a *child* of the scroll
+ * viewport (a sticky seat inside it), so `mask-image` on the scroller would
+ * erase the Composer together with the transcript — the whole input card
+ * vanishes as soon as either edge fades. Two canvas-coloured overlays on the
+ * page body instead sit above the transcript and below the Composer's own
+ * `z-index: 7`. The page body is the box between the header and the window
+ * edge, so both overlays stay in the viewport while the transcript scrolls
+ * under them.
+ *
+ * The bottom overlay covers the Composer's *whole* footprint, not a 24px strip:
+ * below the Composer's top edge the transcript must not show at all. Content
+ * that reaches there paints through the translucent surfaces the InputBar
+ * stacks above its card — a plan or tasks row in `conversation.input.dock`, for
+ * one — which reads as ghosted text inside the panel. The overlay is canvas
+ * coloured and sits under those surfaces, so they render clean, and only its
+ * leading `--ccd-edge-fade` px stay a ramp, which is the fade itself.
+ * `--ccd-fade-bottom-inset` (published by `compat/conversation-fade.ts`) is how
+ * far the Composer reaches up from the bottom of the page body.
+ *
+ * `to bottom`/`to top` over `--ccd-canvas` leaves the canvas colour and only
+ * drops its alpha, so the fade never tints the text grey.
+ */
+html[data-dsh-ccd-style="true"] .ST7X_W_body::before,
+html[data-dsh-ccd-style="true"] .ST7X_W_body::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  right: 0;
+  height: var(--ccd-edge-fade);
+  background: var(--ccd-canvas);
+  pointer-events: none;
+  /* Above the transcript, below the Composer seat (7) and the jump-to-bottom
+     control (8) so neither is veiled. */
+  z-index: 1;
+  opacity: 0;
+}
+
+html[data-dsh-ccd-style="true"] .ST7X_W_body::before {
+  top: 0;
+  background: linear-gradient(to bottom, var(--ccd-canvas), transparent);
+}
+
+html[data-dsh-ccd-style="true"] .ST7X_W_body::after {
+  bottom: 0;
+  height: calc(var(--ccd-fade-bottom-inset, 0px) + var(--ccd-edge-fade));
+  background: linear-gradient(
+    to top,
+    var(--ccd-canvas) 0,
+    var(--ccd-canvas) calc(100% - var(--ccd-edge-fade)),
+    transparent 100%
+  );
+}
+
+html[data-dsh-ccd-style="true"] .ST7X_W_body:has([data-conversation-scroll][data-ccd-fade-top])::before {
+  opacity: 1;
+}
+
+html[data-dsh-ccd-style="true"] .ST7X_W_body:has([data-conversation-scroll][data-ccd-fade-bottom])::after {
+  opacity: 1;
+}
+
 html[data-dsh-ccd-style="true"] .gKv1-q_root {
   font-size: var(--dsh-content-font-size, 14px);
   line-height: 24px;
   color: var(--ccd-text);
+}
+
+/* Official MarkdownText in assistant replies only. Compact reasoning/tool
+   Markdown, user references and the Composer retain their own presentation.
+   Sources and static-library class names are pinned in compat/host-dom.ts. */
+html[data-dsh-ccd-style="true"] .gKv1-q_root ._markdown_1ypvv_5:not([data-markdown-variant="compact"]) {
+  font-family: var(--ccd-font-ui);
+  font-size: inherit;
+  line-height: inherit;
+  color: var(--ccd-text);
+}
+
+html[data-dsh-ccd-style="true"] .gKv1-q_root ._markdown_1ypvv_5:not([data-markdown-variant="compact"]) :is(a, ._fileMention_1ypvv_85) {
+  max-width: 100%;
+  color: var(--ccd-link);
+  font-weight: inherit;
+  text-decoration-line: underline;
+  text-decoration-style: solid;
+  text-decoration-color: var(--ccd-link-underline);
+  text-decoration-thickness: 1px;
+  text-underline-offset: 3px;
+}
+
+html[data-dsh-ccd-style="true"] .gKv1-q_root ._markdown_1ypvv_5:not([data-markdown-variant="compact"]) :is(a, ._fileMention_1ypvv_85):is(:hover, :focus) {
+  text-decoration-color: var(--ccd-link);
+}
+
+/* Limit chips to the text column so long identifiers can wrap inside them.
+   The host uses !important for its code-size ratio, so this override must too.
+   The fenced block is not a chip: it takes its own rule below. */
+html[data-dsh-ccd-style="true"] .gKv1-q_root ._markdown_1ypvv_5:not([data-markdown-variant="compact"]) :not(pre) > code {
+  display: inline-block;
+  max-width: 100%;
+  vertical-align: baseline;
+  font-family: var(--ccd-font-code);
+  font-size: 0.95em !important;
+  font-weight: inherit;
+  line-height: 1.2;
+  color: var(--ccd-inline-code-text);
+  background: var(--ccd-inline-code-fill);
+  border: 1px solid var(--ccd-inline-code-border);
+  border-radius: 5px;
+  padding: 1px 4px;
+  overflow-wrap: anywhere;
+}
+
+html[data-dsh-ccd-style="true"] .gKv1-q_root ._markdown_1ypvv_5:not([data-markdown-variant="compact"]) strong {
+  font-weight: var(--ccd-font-weight-strong);
+}
+
+/*
+ * Fenced code blocks take the reference's outlined card: a white fill inside a
+ * single hairline, replacing the host's cool wash. The host paints three nested
+ * surfaces with that wash — the wrapper, the language banner and `pre` itself —
+ * and the banner's outer wrapper falls back to the page token, so every one of
+ * them is repainted here; leaving any single layer would show a grey band.
+ * Everything else stays native: syntax colours, the language label and the
+ * copy/wrap controls.
+ *
+ * `data-code-wrap` is a stable host anchor (the class list also carries
+ * `md-code-block`); the inner layers are reached through it so no hashed class
+ * name is repeated here.
+ */
+html[data-dsh-ccd-style="true"] .gKv1-q_root ._markdown_1ypvv_5:not([data-markdown-variant="compact"]) [data-code-wrap] {
+  box-sizing: border-box;
+  border: 1px solid var(--ccd-border);
+  border-radius: var(--ccd-code-radius);
+  background: var(--ccd-card);
+}
+
+html[data-dsh-ccd-style="true"] .gKv1-q_root ._markdown_1ypvv_5:not([data-markdown-variant="compact"]) [data-code-wrap] > *,
+html[data-dsh-ccd-style="true"] .gKv1-q_root ._markdown_1ypvv_5:not([data-markdown-variant="compact"]) [data-code-wrap] [data-code-block-banner],
+html[data-dsh-ccd-style="true"] .gKv1-q_root ._markdown_1ypvv_5:not([data-markdown-variant="compact"]) [data-code-wrap] pre {
+  /* The card owns the surface now; the layers inside it only carry text. */
+  background: transparent;
+  border-radius: 0;
+}
+
+/*
+ * Tables: one rounded card, as in the reference. The host collapses borders,
+ * takes every cell's leading padding away (`padding: 10px 16px 10px 0`) and
+ * leaves the row rule to each cell, so a card that can carry a radius needs
+ * separate borders, one outline of its own and its own cell padding. The head
+ * keeps a filled surface and a rule one step darker than the outline; body rows
+ * are separated by hairlines, and the card's own edge closes the last one.
+ * Column alignment markers stay the host's business.
+ */
+html[data-dsh-ccd-style="true"] .gKv1-q_root ._markdown_1ypvv_5:not([data-markdown-variant="compact"]) table {
+  box-sizing: border-box;
+  width: 100%;
+  max-width: 100%;
+  border: 1px solid var(--ccd-border);
+  border-radius: var(--ccd-table-radius);
+  border-collapse: separate;
+  border-spacing: 0;
+  /* The head fill and the row rules are painted by the cells, so the card has
+     to clip them to its own radius. */
+  overflow: hidden;
+  font-size: inherit;
+  line-height: inherit;
+}
+
+html[data-dsh-ccd-style="true"] .gKv1-q_root ._markdown_1ypvv_5:not([data-markdown-variant="compact"]) :is(th, td) {
+  /* The host sizes table text one step below the transcript; the reference
+     keeps a table at body size. */
+  font-size: inherit;
+  line-height: inherit;
+  padding: 4px 10px;
+  border: 0;
+  border-bottom: 1px solid var(--ccd-border);
+  vertical-align: middle;
+}
+
+html[data-dsh-ccd-style="true"] .gKv1-q_root ._markdown_1ypvv_5:not([data-markdown-variant="compact"]) thead th {
+  background: var(--ccd-raised);
+  border-bottom-color: var(--ccd-table-head-line);
+  color: var(--ccd-text);
+  font-weight: var(--ccd-font-weight-strong);
+}
+
+html[data-dsh-ccd-style="true"] .gKv1-q_root ._markdown_1ypvv_5:not([data-markdown-variant="compact"]) tbody tr:last-child :is(th, td) {
+  border-bottom: 0;
 }
 
 html[data-dsh-ccd-style="true"] .icaHSq_column {

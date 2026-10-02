@@ -238,17 +238,40 @@ html[data-dsh-ccd-style="true"] .yhfFVG_dock {
   position: absolute;
   /* Before the model selector, which stays the row's last in-flow control. */
   right: calc((100% - min(100% - 32px, var(--ccd-composer-width))) / 2
-    + var(--ccd-composer-row-inset) + var(--ccd-trailing-width, 120px) + var(--ccd-dock-gap));
+    + var(--ccd-composer-row-inset) + var(--ccd-trailing-width, 120px) + var(--ccd-cluster-gap));
   bottom: var(--ccd-composer-bottom-gap);
   height: var(--ccd-control-row-height);
   padding: 0;
-  gap: 2px;
+  gap: var(--ccd-cluster-gap);
   align-items: center;
   justify-content: flex-end;
 }
 
+/*
+ * The trailing cluster reads on one pitch. The host separates its trailing
+ * group's two seats with 12px and this plugin's own model/effort pair with 4px,
+ * which left the ring, the model and the effort on three different rhythms;
+ * every gap in the cluster now comes from `--ccd-cluster-gap` (tokens.css).
+ *
+ * The group's last seat is the native activity control (speech to text). While
+ * no occupant is mounted, its wrapper is still a box — the renderer seats every
+ * entry in a `display: contents` wrapper, so the host's own `:empty` rule cannot
+ * see that it is empty — and the group's gap then held the model/effort pair
+ * 12px off the row's right content edge. Hiding the empty wrapper moves the pair
+ * (and, through `--ccd-trailing-width`, the whole cluster) back onto that edge.
+ * An expanded activity control carries the other class and keeps its seat.
+ */
+html[data-dsh-ccd-style="true"] .yhfFVG_trailing,
+html[data-dsh-ccd-style="true"] .yhfFVG_standardControls {
+  gap: var(--ccd-cluster-gap);
+}
+
+html[data-dsh-ccd-style="true"] .yhfFVG_trailing > .yhfFVG_activity:not(:has(> :not([data-slot]))):not(:has([data-slot] > *)) {
+  display: none;
+}
+
 html[data-dsh-ccd-style="true"] .OpZ85W_root {
-  gap: 2px;
+  gap: var(--ccd-cluster-gap);
   align-items: center;
 }
 

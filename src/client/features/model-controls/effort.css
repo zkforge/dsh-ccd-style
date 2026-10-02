@@ -1,0 +1,464 @@
+/* Adapted from zanwei/claude-model-selector (MIT). See LICENSE. */
+
+.ccd-effort {
+  --effort-accent: var(--ccd-effort-color-1);
+  --effort-text: var(--ccd-effort-color-3);
+  --effort-text-strong: var(--ccd-effort-color-4);
+  --effort-muted: var(--ccd-effort-color-5);
+  --effort-track: var(--ccd-effort-color-6);
+  --effort-track-fill: var(--ccd-effort-color-7);
+  --effort-progress: 0;
+  --effort-thumb-w: 16px;
+  --effort-thumb-h: 20px;
+  --effort-track-pad: 1px;
+  --effort-track-radius: 10px;
+  --effort-surface: var(--ccd-effort-color-8);
+  --effort-outline: var(--ccd-effort-color-9);
+  --ease-decay: cubic-bezier(0.2, 0, 0, 1);
+  display: block;
+  width: min(220px, calc(100vw - 24px));
+  max-width: 100%;
+  color: var(--effort-text);
+  font-family: ui-sans-serif, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  font-size: 12px;
+  line-height: 1.35;
+  font-synthesis: none;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+.ccd-effort *, .ccd-effort *::before, .ccd-effort *::after {
+  box-sizing: border-box;
+}
+
+.ccd-effort button, .ccd-effort input {
+  font: inherit;
+}
+
+.ccd-effort .panel {
+  position: absolute;
+  z-index: 4;
+  right: 0;
+  bottom: 3.25rem;
+  width: 100%;
+  padding: 12px;
+  border: 1px solid var(--effort-outline);
+  border-radius: 12px;
+  background: var(--effort-surface);
+  box-shadow:
+    0 1px 2px var(--ccd-effort-color-11),
+    0 4px 10px var(--ccd-effort-color-12),
+    0 12px 28px var(--ccd-effort-color-13);
+  opacity: 1;
+  transform: translateY(0);
+  transition-property: opacity, transform;
+  transition-duration: 120ms;
+  transition-timing-function: ease-in;
+}
+
+.ccd-effort .header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  min-height: 20px;
+  gap: 8px;
+}
+
+.ccd-effort .title {
+  display: flex;
+  align-items: baseline;
+  min-width: 0;
+  color: var(--effort-text);
+  font-size: 13px;
+  font-weight: 500;
+  line-height: 1.3;
+  letter-spacing: -0.01em;
+  text-wrap: balance;
+}
+
+.ccd-effort .level-stage {
+  position: relative;
+  display: inline-block;
+  height: 1.3em;
+  margin-left: 4px;
+  color: var(--effort-text-strong);
+  line-height: inherit;
+  vertical-align: baseline;
+}
+
+.ccd-effort .level-stage > span {
+  position: absolute;
+  top: 0;
+  left: 0;
+  line-height: inherit;
+  white-space: nowrap;
+  transform-origin: left center;
+}
+
+.ccd-effort .level-current {
+  opacity: 1;
+  transform: translateY(0);
+  filter: blur(0);
+  transition-property: opacity, transform, filter, color;
+  transition-duration: 180ms;
+  transition-timing-function: cubic-bezier(0.2, 0, 0, 1);
+}
+
+.ccd-effort .level-current.is-preparing {
+  opacity: 0;
+  transform: translateY(var(--label-enter-y, 3px));
+  filter: blur(2px);
+  transition-duration: 0ms;
+  transition-delay: 0ms;
+}
+
+.ccd-effort .level-outgoing {
+  opacity: 1;
+  transform: translateY(0);
+  filter: blur(0);
+  pointer-events: none;
+  transition-property: opacity, transform, filter;
+  transition-duration: 180ms;
+  transition-timing-function: cubic-bezier(0.2, 0, 0, 1);
+}
+
+.ccd-effort .level-outgoing.is-exiting {
+  opacity: 0;
+  transform: translateY(var(--label-exit-y, -3px));
+  filter: blur(2px);
+}
+
+.ccd-effort[data-ultra] .level-current {
+  color: var(--effort-accent);
+}
+
+.ccd-effort .help-wrap {
+  position: relative;
+  flex: 0 0 auto;
+}
+
+.ccd-effort .help-button {
+  position: relative;
+  display: grid;
+  width: 20px;
+  height: 20px;
+  margin: 0;
+  padding: 2px;
+  place-items: center;
+  border: 0;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--effort-muted);
+  cursor: help;
+  transition-property: color, background-color, scale;
+  transition-duration: 150ms;
+  transition-timing-function: ease-out;
+}
+
+.ccd-effort .help-button:hover {
+  color: var(--ccd-effort-color-14);
+  background: var(--ccd-effort-color-15);
+}
+
+.ccd-effort .help-button:active {
+  scale: 0.96;
+}
+
+.ccd-effort .help-button:focus-visible {
+  outline: 2px solid color-mix(in srgb, var(--effort-accent) 35%, transparent);
+  outline-offset: 2px;
+}
+
+.ccd-effort .help-button svg {
+  width: 14px;
+  height: 14px;
+}
+
+.ccd-effort .tooltip {
+  position: absolute;
+  z-index: 8;
+  top: auto;
+  bottom: calc(100% + 6px);
+  right: 0;
+  width: min(220px, calc(100vw - 24px));
+  padding: 10px 12px;
+  border: 1px solid var(--ccd-effort-color-16);
+  border-radius: 0.5rem;
+  background: var(--ccd-effort-color-17);
+  box-shadow:
+    0 2px 5px var(--ccd-effort-color-18),
+    0 8px 18px var(--ccd-effort-color-18);
+  color: var(--ccd-effort-color-19);
+  font-size: 12px;
+  font-weight: 450;
+  line-height: 1.35;
+  text-wrap: pretty;
+  opacity: 0;
+  visibility: hidden;
+  transform: translateY(-2px);
+  transition-property: opacity, transform, visibility;
+  transition-duration: 120ms;
+  transition-timing-function: ease-in;
+}
+
+.ccd-effort .help-wrap:hover .tooltip,
+.ccd-effort .help-button:focus-visible + .tooltip,
+.ccd-effort .help-wrap[data-tip-open] .tooltip {
+  opacity: 1;
+  visibility: visible;
+  transform: translateY(0);
+  transition-timing-function: ease-out;
+}
+
+.ccd-effort .axis {
+  display: flex;
+  justify-content: space-between;
+  margin-top: 16px;
+  color: var(--effort-muted);
+  font-size: 12px;
+  font-weight: 450;
+  line-height: 1.3;
+  letter-spacing: -0.01em;
+}
+
+.ccd-effort .track-shell {
+  position: relative;
+  height: 32px;
+  margin-top: 2px;
+}
+
+.ccd-effort .track {
+  position: absolute;
+  inset: 6px 0;
+  overflow: hidden;
+  border-radius: var(--effort-track-radius);
+  background-color: var(--effort-track);
+  box-shadow: inset 0 1px 1px var(--ccd-effort-color-20);
+}
+
+.ccd-effort .track-fill {
+  position: absolute;
+  z-index: 0;
+  top: 0;
+  bottom: 0;
+  left: var(--effort-track-pad);
+  width: calc(
+    (100% - (var(--effort-track-pad) * 2) - var(--effort-thumb-w))
+      * var(--effort-progress, 0)
+    + (var(--effort-thumb-w) * 0.5)
+  );
+  border-radius: calc(var(--effort-track-radius) - 1px) 0 0 calc(var(--effort-track-radius) - 1px);
+  background: var(--effort-track-fill);
+  pointer-events: none;
+  transition-property: opacity;
+  transition-duration: 200ms;
+  transition-timing-function: var(--ease-decay);
+}
+
+.ccd-effort[data-ultra] .track-fill {
+  opacity: 0;
+}
+
+.ccd-effort .track::before {
+  content: "";
+  position: absolute;
+  z-index: 0;
+  inset: 0;
+  border-radius: inherit;
+  background: linear-gradient(
+    90deg,
+    var(--ccd-effort-color-21) 0%,
+    var(--ccd-effort-color-22) 18%,
+    var(--ccd-effort-color-23) 32%,
+    var(--ccd-effort-color-24) 48%,
+    var(--ccd-effort-color-25) 68%,
+    var(--ccd-effort-color-26) 82%,
+    var(--ccd-effort-color-27) 100%
+  );
+  opacity: 0;
+  transition-property: opacity;
+  transition-duration: 340ms;
+  transition-timing-function: ease-in;
+}
+
+.ccd-effort[data-ultra] .track::before {
+  opacity: 1;
+}
+
+.ccd-effort .ultra-fallback,
+.ccd-effort .pixel-field {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  opacity: 0;
+  transition-property: opacity;
+  transition-duration: 200ms;
+  transition-timing-function: var(--ease-decay);
+}
+
+.ccd-effort .ultra-fallback {
+  background: linear-gradient(
+    90deg,
+    var(--ccd-effort-color-21) 0%,
+    var(--ccd-effort-color-22) 18%,
+    var(--ccd-effort-color-23) 32%,
+    var(--ccd-effort-color-28) 48%,
+    var(--ccd-effort-color-29) 68%,
+    var(--ccd-effort-color-30) 82%,
+    var(--ccd-effort-color-31) 100%
+  );
+}
+
+.ccd-effort[data-ultra] .pixel-field {
+  opacity: 1;
+}
+
+.ccd-effort .ticks {
+  position: absolute;
+  z-index: 1;
+  inset: 0 calc(var(--effort-track-pad) + var(--effort-thumb-w) * 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  pointer-events: none;
+}
+
+.ccd-effort .tick {
+  width: 3px;
+  height: 3px;
+  border-radius: 999px;
+  background: var(--ccd-effort-color-32);
+  opacity: 0.82;
+  transition-property: opacity;
+  transition-duration: 180ms;
+  transition-timing-function: var(--ease-decay);
+}
+
+.ccd-effort .tick:last-child {
+  background: var(--effort-accent);
+  opacity: 1;
+}
+
+.ccd-effort[data-ultra] .tick {
+  opacity: 0;
+}
+
+.ccd-effort .range {
+  position: absolute;
+  z-index: 3;
+  inset: 0 var(--effort-track-pad);
+  width: calc(100% - var(--effort-track-pad) * 2);
+  height: 100%;
+  margin: 0;
+  appearance: none;
+  -webkit-appearance: none;
+  border: 0;
+  outline: 0;
+  background: transparent;
+  cursor: ew-resize;
+  touch-action: none;
+}
+
+.ccd-effort .range::-webkit-slider-runnable-track {
+  height: var(--effort-thumb-h);
+  border: 0;
+  background: transparent;
+}
+
+.ccd-effort .range::-webkit-slider-thumb {
+  width: var(--effort-thumb-w);
+  height: var(--effort-thumb-h);
+  margin-top: 0;
+  appearance: none;
+  -webkit-appearance: none;
+  border: 1px solid var(--ccd-effort-color-33);
+  border-radius: 0.5rem;
+  background: var(--ccd-effort-color-19);
+  box-shadow:
+    0 1px 2px var(--ccd-effort-color-34),
+    0 4px 10px var(--ccd-effort-color-35);
+  cursor: ew-resize;
+  transition-property: transform;
+  transition-duration: 150ms;
+  transition-timing-function: ease-out;
+}
+
+.ccd-effort .range::-moz-range-track {
+  height: var(--effort-thumb-h);
+  border: 0;
+  background: transparent;
+}
+
+.ccd-effort .range::-moz-range-progress {
+  background: transparent;
+}
+
+.ccd-effort .range::-moz-range-thumb {
+  width: var(--effort-thumb-w);
+  height: var(--effort-thumb-h);
+  border: 1px solid var(--ccd-effort-color-33);
+  border-radius: 0.5rem;
+  background: var(--ccd-effort-color-19);
+  box-shadow:
+    0 1px 2px var(--ccd-effort-color-34),
+    0 4px 10px var(--ccd-effort-color-35);
+  cursor: ew-resize;
+  transition-property: transform;
+  transition-duration: 150ms;
+  transition-timing-function: ease-out;
+}
+
+.ccd-effort .range:active::-webkit-slider-thumb {
+  transform: scale(0.96);
+}
+
+.ccd-effort .range:active::-moz-range-thumb {
+  transform: scale(0.96);
+}
+
+.ccd-effort .range:focus-visible::-webkit-slider-thumb {
+  box-shadow:
+    0 0 0 3px color-mix(in srgb, var(--effort-accent) 30%, transparent),
+    0 1px 2px var(--ccd-effort-color-34),
+    0 4px 10px var(--ccd-effort-color-35);
+}
+
+.ccd-effort .range:focus-visible::-moz-range-thumb {
+  box-shadow:
+    0 0 0 3px color-mix(in srgb, var(--effort-accent) 30%, transparent),
+    0 1px 2px var(--ccd-effort-color-34),
+    0 4px 10px var(--ccd-effort-color-35);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .ccd-effort .level-current,
+  .ccd-effort .level-outgoing,
+  .ccd-effort .panel,
+  .ccd-effort .track::before,
+  .ccd-effort .track-fill,
+  .ccd-effort .range::-webkit-slider-thumb,
+  .ccd-effort .range::-moz-range-thumb,
+  .ccd-effort .help-button,
+  .ccd-effort .tooltip {
+    transition-duration: 0.001ms;
+  }
+
+  .ccd-effort[data-ultra] .ultra-fallback {
+    opacity: 1;
+  }
+
+  .ccd-effort .pixel-field {
+    display: none;
+  }
+}
+
+.ccd-effort .panel { position: static; width: 100%; }
+.ccd-effort { position: fixed; z-index: 1000; margin: 0; }
+.ccd-effort .level-stage::after {
+  content: attr(data-longest);
+  visibility: hidden;
+  pointer-events: none;
+}
+.ccd-effort .selection-error { margin-top: 8px; color: var(--ccd-text-secondary); font-size: 12px; overflow-wrap: anywhere; }

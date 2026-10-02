@@ -7,6 +7,9 @@ export const DSH_SLOTS = Object.freeze({
   conversation: 'main.conversation',
   header: 'conversation.header',
   sessionHeader: 'conversation.session.header',
+  /** Trailing header seats: `utilities` is a list the native actions occupy too. */
+  sessionHeaderUtilities: 'conversation.session.header.utilities',
+  sessionHeaderCorner: 'conversation.session.header.corner',
   composerBar: 'conversation.composer.bar',
   inputDock: 'conversation.input.dock',
   composerDock: 'conversation.composer.dock',

@@ -10,6 +10,9 @@ export const TRAILING_WIDTH_PROPERTY = '--ccd-trailing-width';
 /** Remaining model-button space after leading controls, statistics and gaps. */
 export const MODEL_MAX_WIDTH_PROPERTY = '--ccd-model-max-width';
 
+/** The one gap the trailing cluster uses, read to budget the model button. */
+export const CLUSTER_GAP_PROPERTY = '--ccd-cluster-gap';
+
 /**
  * The responsive statistics cluster sits before the model selector. Its dock is
  * a sibling of the card rather than a row child, so its wide-layout offset needs
@@ -30,7 +33,12 @@ export function mountComposerStats(document: Document, report: (error: unknown) 
     for (const pill of document.querySelectorAll<HTMLElement>(HOST.statsPill)) {
       const parts = (pill.querySelector(HOST.statsLabel)?.textContent ?? '')
         .split('·').map(part => part.trim()).filter(Boolean);
-      const value = parts.find(part => part.includes('/')) ?? parts[0] ?? '';
+      /* The speed readout carries a slash; the usage pill's second segment is
+         the cache-hit share the host already prints next to its total
+         ("117M tok · 缓存命中 95%"). Mirror the cache hit rather than the
+         session total, and fall back to the first segment when the host has no
+         billed input to compute a share from. */
+      const value = parts.find(part => part.includes('/')) ?? parts.find(part => part.includes('%')) ?? parts[0] ?? '';
       const quoted = value === '' ? '' : JSON.stringify(value);
       if (pill.style.getPropertyValue(STAT_VALUE_PROPERTY) !== quoted) {
         if (quoted === '') pill.style.removeProperty(STAT_VALUE_PROPERTY);
@@ -59,7 +67,7 @@ export function mountComposerStats(document: Document, report: (error: unknown) 
           .map(child => child.getBoundingClientRect().width).filter(width => width > 0);
         const extras = Math.max(0, trailing.getBoundingClientRect().width - model.getBoundingClientRect().width);
         const dockWidth = dock.getBoundingClientRect().width;
-        const dockGap = dockWidth > 0 ? parseFloat(getComputedStyle(root).getPropertyValue('--ccd-dock-gap')) : 0;
+        const dockGap = dockWidth > 0 ? parseFloat(getComputedStyle(root).getPropertyValue(CLUSTER_GAP_PROPERTY)) : 0;
         const room = Math.max(0, Math.floor(available - leading.reduce((sum, width) => sum + width, 0)
           - leading.length * parseFloat(style.columnGap) - extras - dockWidth - dockGap));
         const maxWidth = `${room}px`;

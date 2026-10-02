@@ -64,3 +64,18 @@ html[data-dsh-ccd-style="true"] [data-ccd-account-menu] div:has(> [role="menuite
   padding-top: 4px;
   border-top: 0.5px solid var(--ccd-border-soft);
 }
+
+/* Sign out is the one row whose icon does not come from the product icon set:
+   ui-settings-account inlines it from a 14-unit artwork (`LogoutIcon`,
+   `viewBox="0 0 14 14"`, fill-only) that fills its whole canvas, while Settings
+   and Feedback are 16-unit artworks that the Menu primitive's icon seat scales
+   down to its 14px box (`ui-primitives/lib/Menu.js` `MenuItemButton`, whose
+   `.itemIcon svg` rule wins over the artwork's own width and height). Sign out
+   is therefore the only glyph drawn at full slot size: in a 2x capture it inks
+   13.5px against 12 and 10 for its neighbours, with a 1.4px wall against their
+   1.14px stroke. Scaling it by the same 14/16 the product icons already get
+   returns it to their size; the scale is taken about the svg's own box, so the
+   glyph keeps the slot's centre. */
+html[data-dsh-ccd-style="true"] [data-ccd-account-menu] [role="menuitem"] > span:first-child > span > svg {
+  transform: scale(0.875);
+}

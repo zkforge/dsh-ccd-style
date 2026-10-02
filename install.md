@@ -100,7 +100,9 @@ SH
 
 ### 方式 A：DSH 插件面板
 
-在 DSH 中按 **⌘R** 重新加载界面，打开「插件」→ `dsh-ccd-style` → **「启用 CCD 风格界面」**。开关切换立即生效。必要时正常重启应用；重启前保留当前工作。
+在 DSH 中按 **⌘R** 重新加载界面，打开侧栏「插件」→ `dsh-ccd-style` → 点开组件行 `ui-skin-ccd-style`，配置页里打开 **「启用 CCD 风格界面」**。改动即时生效，没有保存按钮。必要时正常重启应用；重启前保留当前工作。
+
+同一页面还可以改背景色与字体：`appearance.canvas`（会话／画布）、`appearance.sidebar`（侧栏）接受 `#rrggbb`，`fonts.uiLatin`／`fonts.uiCjk`／`fonts.code` 接受本机已安装的字体族名（点开下拉框是本机字体菜单，可搜索滚动；清单外的族名在搜索框里输入后回车提交）；留空即用内置值，点「恢复默认」清掉覆盖。保存写入当前 profile 的 `cordis.patch.yml`，只写变化的字段。总开关关闭后配置页仍然存在，可以随时开回来。
 
 安装成功时默认 `enabled: false`，界面保持原生是正常现象。使用浅色主题验收；深色未适配。
 
@@ -114,7 +116,16 @@ SH
   config:
     enabled: true
     debug: false
+    appearance:
+      canvas: "#fcfcfb"   # 会话与画布背景色，#rrggbb；留空或省略用内置值
+      sidebar: "#fbfbfa"  # 侧栏背景色
+    fonts:
+      uiLatin: ""         # 界面西文字体族名，例如 Newsreader
+      uiCjk: ""           # 界面中文字体族名，例如 PingFang SC
+      code: ""            # 代码与等宽字体族名，例如 JetBrains Mono
 ```
+
+颜色和字体只在填写时生效；三个字体项都留空时不覆盖任何字体变量。非法值（非 `#rrggbb`、字体名含分号或括号）会被 Host 拒绝，配置页会就地提示。
 
 合并规则：
 
@@ -123,6 +134,7 @@ SH
 - 用 YAML 解析／编辑工具保留其他 patch、条目顺序和注释；读取或解析失败时停止写入，不以示例覆盖整份文件。
 - 若该条目被显式 `disabled: true`，一并设为 `disabled: false`；这是 loader 停用状态，与 `config.enabled` 是两个独立开关。
 - `features.tool-calls` 与 `features.statistics` 尚未实现，保持关闭。四个核心 feature 默认开启；若用户此前关闭了某个模块，保留其选择。
+- `appearance` 与 `fonts` 各是一个整体小节：要保留用户已选的颜色或字体，合并时把这两节一并重述，不要只写其中一个字段。
 
 这段列表用于**覆盖 bundle 已插入的条目**，无需再次写 `insert:`。保存后重新加载界面；如果配置没有被当前进程采纳，正常重启 DSH 再验证。
 
