@@ -14,6 +14,7 @@ Host 半注册 `ccdUsage` 投影单元折叠会话日志，浏览器半读 `/api
 | 读数稳定 | 会话 55／提示 136／token 1.070B／活跃 4 天／峰值 12 AM／最爱模型 `opencode-go/deepseek-v4.1-flash`，重复轮询逐项一致 |
 | 独立核对 | 直接汇总 59 条写回的 `ccdUsage` 检查点：55 个工作会话、136 提示、1,070,017,050 token —— 与路由输出逐项吻合 |
 | 卡片几何（真实数据下） | 480×299、左上 (446,114)、问候块下缘 94 → 间距 20、圆角 8、`rgb(240,240,240)`、`8px 12px 12px`、182 格（1–4 档各 1 格） |
+| 存活会话读取 | 侧栏打开一个既有会话（它随即成为 live，走 `sessionProjections.snapshot`），路由读数与打开前逐项一致、`missed` 保持 0；离开 hero 页时卡片随阶段卸载（`card: false`） |
 | 控制台 | 0 pageerror |
 
 排查中确认的三处宿主事实（细节见 [DSH 兼容边界](DSH_COMPATIBILITY.md#统计卡片的数据通道2026-10-03)）：插件配置是带 `get()` 的响应式 cell（直接读字段会拿到对象，门控静默失效）；`apply` 执行时 `sessionProjections` 与 `connection` 尚未就绪，需 `ctx.inject` 等待；浏览器半的 `ctx.sessions` 是 `dsh-api-session-controller` 的 client store，导入 host 的 `dsh-session` 类型会把它改错（`npm run typecheck` 抓到，已在 `model-controls/mount.ts` 用结构化声明修正）。
