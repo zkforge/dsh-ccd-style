@@ -2,7 +2,7 @@
 
 为 DeepSeek Harness Desktop 提供 Claude Code Desktop 风格的侧栏、新会话页、聊天页与输入区。
 
-支持 macOS、DSH `0.2.0-rc.2`，浅色与深色模式。首次安装后自动开启，升级沿用已保存的配置。
+支持 macOS（Apple 芯片）与 Windows 10 及以上（64 位）、DSH `0.2.0-rc.2`，浅色与深色模式。首次安装后自动开启，升级沿用已保存的配置。
 
 ## 安装
 
