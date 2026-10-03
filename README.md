@@ -73,14 +73,7 @@
 
 ## 🚀 安装
 
-当前使用**源码安装**，复制以下指令交给 Agent：
-
-```text
-请按 https://github.com/zkforge/dsh-ccd-style/blob/main/install.md 安装 DSH Claude Code Desktop Style。
-```
-
-> [!IMPORTANT]
-> npm 发布及市场收录完成后，下表的三个入口才可用；在此之前请按上面的源码安装流程操作。
+[npm 包](https://www.npmjs.com/package/dsh-ccd-style)已发布，可通过官方插件页或终端安装。
 
 <div align="center">
 
@@ -88,11 +81,13 @@
 | --- | --- |
 | 官方插件页 | 「插件 → 添加插件」输入 `dsh-ccd-style` |
 | 终端 | `dsh plugin --profile desktop add dsh-ccd-style` |
-| 插件市场 | 搜索 `dsh-ccd-style` 并安装 |
+| 插件市场 | 待目录收录后可搜索安装；当前请使用上面两个入口 |
 
 </div>
 
 首次安装后插件自动开启，升级沿用已保存的配置。
+
+终端命令需先注册 `dsh`；应用内添加插件无需注册 CLI。安装后重载 DSH，具体步骤、应用内置 CLI 路径与源码安装见 [安装指南](https://github.com/zkforge/dsh-ccd-style/blob/main/install.md)。
 
 ## ⚙️ 配置
 
