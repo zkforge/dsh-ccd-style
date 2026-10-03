@@ -90,6 +90,13 @@
   padding: 0 2px 6px;
 }
 
+/* An unregistered DSH build leaves the native interface in place while every
+   switch still reads "on"; the page says so in the host's warning colour. */
+.ccd-settings-warning {
+  color: var(--dsw-alias-state-warn-label);
+  padding: 0 2px 10px;
+}
+
 .ccd-settings-control {
   display: flex;
   align-items: center;

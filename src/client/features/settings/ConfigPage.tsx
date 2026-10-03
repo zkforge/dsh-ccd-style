@@ -5,6 +5,7 @@ import type {
 } from '../../contracts/ports.ts';
 import { adoptConfig, APPEARANCE_FIELDS } from '../../../shared/config.ts';
 import type { AppearanceField, FeatureId, FontField } from '../../../shared/config.ts';
+import { hostBuildStatus } from '../../compat/host-builds.ts';
 import { commitColour, commitFont, setOperation, unsetOperation } from './edits.ts';
 import type { FieldErrors } from './edits.ts';
 import { loadSystemFontFamilies } from './fonts.ts';
@@ -194,6 +195,7 @@ export function ConfigPage(props: ConfigPageProps): ReactElement {
   const statusKey: SettingsKey | null = status === 'saving' ? 'state.saving'
     : status === 'saved' ? 'state.saved'
       : status === 'failed' ? 'state.failed' : null;
+  const buildState = hostBuildStatus(document).state;
 
   return (
     <div className="ccd-settings-page">
@@ -206,6 +208,16 @@ export function ConfigPage(props: ConfigPageProps): ReactElement {
           onChange={value => void write([setOperation(['enabled'], value)])}
         />
       </section>
+
+      {/* Host class names are hashed per DSH build. An unregistered build makes
+          every host selector miss while the switches above still read "on", so
+          the page says why the interface looks native. The frame is on screen
+          by the time this page renders, which is when the answer is knowable. */}
+      {buildState === 'unknown' ? (
+        <p className="ccd-settings-note ccd-settings-warning" role="status">
+          {translate('note.unknownBuild')}
+        </p>
+      ) : null}
 
       <section className="ccd-settings-section">
         <h4 className="ccd-settings-title">{translate('section.features')}</h4>

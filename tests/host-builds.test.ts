@@ -3,8 +3,9 @@ import { readdirSync, readFileSync } from 'node:fs';
 import { test } from 'node:test';
 import { fileURLToPath } from 'node:url';
 import {
-  HOST_BUILDS, PINNED_BUILD, WINDOWS_BUILD, aliasHostClasses, detectHostBuild,
+  HOST_BUILDS, PINNED_BUILD, WINDOWS_BUILD, aliasHostClasses, detectHostBuild, hostBuildStatus, watchHostBuild,
 } from '../src/client/compat/host-builds.ts';
+import type { HostBuildStatus } from '../src/client/compat/host-builds.ts';
 import { hostAnchors, hostSelectors } from '../src/client/compat/host-dom.ts';
 
 /*
@@ -106,6 +107,88 @@ test('detection reads the frame first, then the preload platform', () => {
   assert.equal(detectHostBuild(documentDouble(undefined)), PINNED_BUILD);
   assert.equal(detectHostBuild(documentDouble('darwin', 'BynINW_frame _6Qf49G_quietBars')), WINDOWS_BUILD);
   assert.equal(detectHostBuild(documentDouble('win32', '_6Qf49G_frame')), PINNED_BUILD);
+});
+
+test('an unregistered frame is the state the page and the log report', () => {
+  /* No frame yet: the platform hint decides, and nothing is claimed. */
+  assert.equal(hostBuildStatus(documentDouble('win32')).state, 'pending');
+  assert.equal(hostBuildStatus(documentDouble('win32')).build, WINDOWS_BUILD);
+  /* A frame this plugin knows. */
+  assert.equal(hostBuildStatus(documentDouble('darwin', 'BynINW_frame')).state, 'identified');
+  assert.equal(hostBuildStatus(documentDouble('darwin', 'BynINW_frame')).build, WINDOWS_BUILD);
+  /* A frame from a build with class names this plugin has never seen. */
+  const stranger = documentDouble('darwin', 'Qq9Zz0_frame');
+  assert.equal(hostBuildStatus(stranger).state, 'unknown');
+  assert.equal(hostBuildStatus(stranger).build, PINNED_BUILD);
+  /* The state is re-read, so a later frame can still identify the build. */
+  assert.equal(hostBuildStatus(stranger).state, 'unknown');
+});
+
+/** Observer double recording the callback and target so a test can fire it. */
+class FakeObserver {
+  static instances: FakeObserver[] = [];
+  readonly callback: () => void;
+  observed: unknown = null;
+  disconnected = false;
+  constructor(callback: () => void) {
+    this.callback = callback;
+    FakeObserver.instances.push(this);
+  }
+  observe(target: unknown): void { this.observed = target; }
+  disconnect(): void { this.disconnected = true; }
+}
+
+test('the build is reported once the shell renders its frame, then the watch stops', () => {
+  const scope = globalThis as { MutationObserver?: unknown };
+  const original = scope.MutationObserver;
+  FakeObserver.instances = [];
+  scope.MutationObserver = FakeObserver;
+  try {
+    let frame: { className: string } | null = null;
+    const document = {
+      documentElement: { dataset: { platform: 'win32' } },
+      querySelector: () => frame,
+    } as unknown as Document;
+    const seen: HostBuildStatus[] = [];
+    const release = watchHostBuild(document, status => seen.push(status));
+
+    /* Nothing is claimed before the frame exists. */
+    assert.equal(seen.length, 0);
+    assert.equal(FakeObserver.instances.length, 1);
+    assert.notEqual(FakeObserver.instances[0]?.observed, null);
+
+    frame = { className: 'Qq9Zz0_frame' };
+    FakeObserver.instances[0]?.callback();
+    assert.equal(seen.length, 1);
+    assert.equal(seen[0]?.state, 'unknown');
+    assert.equal(FakeObserver.instances[0]?.disconnected, true);
+
+    /* A record delivered after the report cannot report twice. */
+    FakeObserver.instances[0]?.callback();
+    assert.equal(seen.length, 1);
+    release();
+  } finally {
+    if (original === undefined) delete scope.MutationObserver;
+    else scope.MutationObserver = original;
+  }
+});
+
+test('a document whose frame is already known reports immediately', () => {
+  const scope = globalThis as { MutationObserver?: unknown };
+  const original = scope.MutationObserver;
+  FakeObserver.instances = [];
+  scope.MutationObserver = FakeObserver;
+  try {
+    const seen: HostBuildStatus[] = [];
+    const release = watchHostBuild(documentDouble('darwin', 'BynINW_frame'), status => seen.push(status));
+    assert.equal(seen.length, 1);
+    assert.equal(seen[0]?.state, 'identified');
+    assert.equal(FakeObserver.instances.length, 0);
+    release();
+  } finally {
+    if (original === undefined) delete scope.MutationObserver;
+    else scope.MutationObserver = original;
+  }
 });
 
 test('resolved tables speak the document build and keep the authored table intact', () => {

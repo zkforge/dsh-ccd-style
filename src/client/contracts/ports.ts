@@ -161,5 +161,6 @@ export interface DomPort {
 
 export interface Logger {
   debug(message: string): void;
-  error(message: string, error: unknown): void;
+  /** `error` carries a cause when there is one; a report without one is fine. */
+  error(message: string, error?: unknown): void;
 }

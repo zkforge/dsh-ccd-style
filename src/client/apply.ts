@@ -5,6 +5,7 @@ import { adoptConfig } from '../shared/config.ts';
 import { ENTRY_ID, PLUGIN_ID } from '../shared/identity.ts';
 import { createHostServices } from './compat/adapter.ts';
 import { mountComposerMenuPlacement } from './compat/composer-menus.ts';
+import { watchHostBuild } from './compat/host-builds.ts';
 import { mountComposerStats } from './compat/stats-values.ts';
 import { mountComposerPlaceholder } from './compat/composer-placeholder.ts';
 import { mountOpenTargetMode } from './compat/open-target.ts';
@@ -124,6 +125,17 @@ export function apply(ctx: Context): void {
           mountComposerPet(ctx, environment, scope);
         }
         mountFeatures(FEATURES, environment, scope);
+        /* Host class names are hashed per DSH build, so a build this plugin has
+           never seen makes every host selector miss. That failure is silent by
+           nature — the native interface simply stays — so it is reported as
+           soon as the shell's frame identifies the build. */
+        scope.add(watchHostBuild(document, status => {
+          if (status.state !== 'unknown') return;
+          logger.error(
+            'unregistered DSH build: the host class names changed, so the CCD styles stay off; '
+            + 'refresh compat/host-builds.ts with `node scripts/host-prefixes.mjs <app.asar>`',
+          );
+        }));
       } catch (error) {
         scope.dispose();
         logger.error('activation failed; native interface retained', error);

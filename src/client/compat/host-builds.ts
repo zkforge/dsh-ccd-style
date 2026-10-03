@@ -81,8 +81,36 @@ export const HOST_BUILDS: readonly HostBuild[] = Object.freeze([PINNED_BUILD, WI
 /** Detection results that came from the document itself, so they never change. */
 const identified = new WeakMap<Document, HostBuild>();
 
+/** How a document's build was decided. */
+export type HostBuildState =
+  /** The frame named a registered build. */
+  | 'identified'
+  /** The shell has not rendered its frame yet; the preload's platform decided. */
+  | 'pending'
+  /** A frame exists and belongs to no registered build: the classes cannot match. */
+  | 'unknown';
+
+/** One document's build and how confidently it was recognised. */
+export interface HostBuildStatus {
+  readonly build: HostBuild;
+  readonly state: HostBuildState;
+}
+
+/** The frame's class names, or an empty list when there is no frame yet. */
+function frameClasses(document: Document): string[] {
+  const frame = typeof document.querySelector === 'function'
+    ? document.querySelector('[data-slot="root"] > div')
+    : null;
+  return typeof frame?.className === 'string' ? frame.className.split(/\s+/u) : [];
+}
+
+/** The build the preload's `data-platform` suggests; a guess, not evidence. */
+function platformBuild(document: Document): HostBuild {
+  return document.documentElement?.dataset?.platform === 'win32' ? WINDOWS_BUILD : PINNED_BUILD;
+}
+
 /**
- * Identify the build behind one document.
+ * Identify the build behind one document, and say how it was identified.
  *
  * The frame's own class name is the evidence: it is present from the first
  * paint of the shell and names the build exactly. Before the shell renders,
@@ -90,26 +118,71 @@ const identified = new WeakMap<Document, HostBuild>();
  * before any page script runs — so a stylesheet mounted during client boot is
  * already rewritten for the right build.
  *
+ * `unknown` is the state worth reporting: the frame is on screen, its classes
+ * match no table here, and every host selector in this plugin will therefore
+ * miss until the tables are refreshed from that build.
+ *
+ * @param document - the renderer document to identify.
+ * @returns the matching build and whether the document itself confirmed it.
+ */
+export function hostBuildStatus(document: Document): HostBuildStatus {
+  const known = identified.get(document);
+  if (known !== undefined) return { build: known, state: 'identified' };
+  const names = frameClasses(document);
+  if (names.length === 0) return { build: platformBuild(document), state: 'pending' };
+  const match = HOST_BUILDS.find(build => names.includes(build.frameClass));
+  if (match === undefined) return { build: platformBuild(document), state: 'unknown' };
+  identified.set(document, match);
+  return { build: match, state: 'identified' };
+}
+
+/**
+ * Identify the build behind one document.
  * @param document - the renderer document to identify.
  * @returns the matching build, or the authored one when nothing is recognised.
  */
 export function detectHostBuild(document: Document): HostBuild {
-  const known = identified.get(document);
-  if (known !== undefined) return known;
-  /* A document that is not a full renderer document — a test double, or one
-     whose root has not been created yet — identifies nothing. Both reads are
-     guarded so detection degrades to the authored build instead of throwing
-     out of a mount. */
-  const frame = typeof document.querySelector === 'function'
-    ? document.querySelector('[data-slot="root"] > div')
-    : null;
-  const names = typeof frame?.className === 'string' ? frame.className.split(/\s+/u) : [];
-  const match = HOST_BUILDS.find(build => names.includes(build.frameClass));
-  if (match !== undefined) {
-    identified.set(document, match);
-    return match;
+  return hostBuildStatus(document).build;
+}
+
+/**
+ * Report the build as soon as the shell's frame settles the question.
+ *
+ * The frame appears after this plugin's client boots, so a status read at mount
+ * time is still `pending`; this watches for the first frame and then stops,
+ * which is also the moment an unregistered build becomes visible.
+ *
+ * @param document - the renderer document to watch.
+ * @param settle - receives the first non-pending status, exactly once.
+ * @returns disposer that stops the watch.
+ */
+export function watchHostBuild(document: Document, settle: (status: HostBuildStatus) => void): () => void {
+  const status = hostBuildStatus(document);
+  if (status.state !== 'pending') {
+    settle(status);
+    return () => {};
   }
-  return document.documentElement?.dataset?.platform === 'win32' ? WINDOWS_BUILD : PINNED_BUILD;
+  if (typeof MutationObserver !== 'function' || document.documentElement === null) return () => {};
+  let released = false;
+  const observer = new MutationObserver(() => {
+    if (released) return;
+    const next = hostBuildStatus(document);
+    if (next.state === 'pending') return;
+    released = true;
+    observer.disconnect();
+    settle(next);
+  });
+  try {
+    observer.observe(document.documentElement, { childList: true, subtree: true });
+  } catch {
+    observer.disconnect();
+    return () => {};
+  }
+  return () => {
+    if (released) return;
+    released = true;
+    observer.disconnect();
+  };
 }
 
 /**
