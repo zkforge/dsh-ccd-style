@@ -14,17 +14,21 @@
 | sidebar | implemented | 开启 |
 | new-session | implemented | 开启 |
 | conversation | implemented | 开启 |
+| composer-pet | implemented（输入框小鲸鱼） | 开启 |
 | tool-calls | planned | 关闭 |
 | statistics | implemented（Host 聚合 + 鉴权路由） | 关闭 |
 
-总开关 `enabled` 默认关闭。开启时挂载作用域样式与兼容适配，关闭时释放取得的资源；设置传输和清理流程见架构。
+安装 bundle 的总开关 `enabled` 为 true，首次加载自动开启；已有用户层配置优先。Host schema 与客户端缺失配置的兜底保持 false。开启时挂载作用域样式与兼容适配，关闭时释放取得的资源；设置传输和清理流程见架构。
 
 ## 窗口与侧栏
 
 入口：`src/client/features/shell/`、`src/client/features/sidebar/`。
 
 - 平铺浅色背景，侧栏右边缘显示分隔线；轨道宽度与拖动完全由 DSH 控制。
-- 展开态统一品牌、导航与工作区列表的缩进、图标列及行距；新会话、插件、自动化任务采用相同导航节奏。
+- 导航三行（新会话／插件／自动化任务）按参考实测收敛为 26px 行高、1px 行间距、8px 行圆角，行内左内边距与图标列、标签左缘维持宿主的 8px／25.5px／42.5px；当前面板行取 `--ccd-selected`，悬停取 `--ccd-hover`，非当前行的字与图标取 `--ccd-text-nav`（参考实测 `#4a4a47`），当前行才回到 `--ccd-text`。三个图标统一到 14px 盒（插件面板那颗星原本满盒 15px）。品牌行与「窗口顶 → 首行顶」的 86px 不变。
+- 工作区列表按参考重排：项目行取宿主自己的 34px 行高、标签落到 14px 左缘（前置文件夹图标隐藏，展开态改由标签后那颗线条箭头承担——收起朝右、展开朝下，宿主 `arrowOpen` 仍负责那一次四分之一转），行尾的「新建会话」与「…」两个按钮都常驻（宿主会在指针离开触发按钮后关掉菜单，触发按钮不能随悬停消失）。项目行自身不铺底色：悬停时清掉宿主的通用灰底，改为标签墨色升到 `--ccd-text`（只有「菜单已打开」那一次仍留宿主的锚点底色）。会话行前导 16px 槽不变（标签仍在 38px），槽内 14px 的活动环缩到 8px，与静态状态点的 6px 实心核心同量级。项目标签颜色与选中会话行底色维持原值。
+- 工作区标题行去掉「工作区」文字，只留右侧三颗 28px 按钮：搜索保持宿主图形，视图选项把宿主自己的横排滑块旋转 90° 成竖排，添加工作区换成共用加号（`--ccd-icon-plus`，取自 DSH `IconPlusOutlineArtwork` 几何，MIT）。三颗按钮的命中盒、回调与无障碍名不变。
+- **新会话条目按第一次发送出现。** DSH 在点「新会话」时就把 Session 建出来，并在第一次消息落盘之前把那一行标成 `blank`（宿主自己的「已创建、还没有内容」事实；浏览器只显示当前选中的那一条 blank）。插件把**所有** blank 根会话的行挡在列表外：`compat/blank-session-rows.ts` 读 `ctx.sessions.list` 的快照，给宿主自己的 `data-row-key="session:<id>"` 行打上 `data-ccd-blank-session`，`sidebar.css` 只隐藏带标记的行。行本身仍在宿主列表里（去掉根属性即恢复原生条目），第一次消息落盘时宿主清掉 `blank`，条目带着生成的标题自己出现；再点「新会话」复用同一个 blank 会话，不会累积。fork 子会话落地前的临时 blank 不是新会话占位，不隐藏。
 - 收起态使用宿主自己的图标轨几何。macOS 展开／收起入口共享窗口坐标：普通窗口 `88/11`，全屏 `12/11`，按钮 `28×28`；非 macOS 保留原生布局。
 - 账号行高 30px，底边留白 8px；账号菜单宽 236px、行高 28px，页眉展示宿主账号名，原生条目与回调保留。
 - Home/Code 与参考图独有导航没有对应的 DSH 能力，未制作空入口。
@@ -37,13 +41,14 @@
 - 工作区与 Agent 预设芯片同输入面板左边缘对齐，26px 高、8px 圆角、细边框。
 - 输入卡片最大宽度 770px。未选工作区时，仅输入面板显示虚线；选择工作区与编辑器禁用状态由宿主处理。
 - 默认提示语与正常聊天统一，中英文可见文本与 aria-label 同步；工作区或阻断提示优先。提示语单行省略，实际编辑器正常换行与增长。
-- 统计卡片（`statistics`，默认关闭）挂在问候块下方 20px 处、与标题左对齐（左缘取 `50% - Composer 卡宽 / 2`），宽 480px，三段结构与参考同构：header（`Overview`／`Models` 与 `All`／`30d`／`7d` 两组分段控件，20px 高、激活项 `#e6e6e6`、13px medium）→ body（`Overview`：3×2 统计格，44px 高、`#dadada`、5px 圆角；26×7 贡献热力图，格距 3px、四档 `hsl(217 70% 72／64／56／48%)`；底部一行书比对文案，11/17、`pt-4`。`Models`：160px 堆叠柱状图，柱宽为天列 72%，y 轴刻度按参考的步长搜索，x 标签按容器宽度实测抽稀；下方图例为 8px 色块＋模型名＋终身 `{in} in · {out} out`＋范围占比，超过 6 行折叠成 `Show N more`）；卡片顶到统计格顶约 41px（8px 内边距 + 20px header + 8px 间距），tiles／heat／文案同属 body、彼此 6px。热力图与柱状图悬浮时弹参考那颗深色提示（`#0c0c0c`、圆角 6、24px 行高、锚点上方 4px、以窗口为碰撞边界）。颜色取自 `theme/tokens.css` 的 `--ccd-stats-*`（含模型 6 档色阶与提示底色），深浅两套都在那里。问候块高度随字号与语言变化，所以卡片偏移由 `mount.ts` 实测问候块高度后写进 `--ccd-stats-gap`，不写死。DSH 的 hero 区只有 `conversation.hero.brand.mark／workspace／agent` 三个小座位，没有承载整块卡片的插槽，所以卡片自持容器：插进 `.ST7X_W_composerStack`（问候块的父容器）、与问候块共用绝对定位坐标系，`compat/host-dom.ts` 登记 `heroComposerStack` 锚点，`features/statistics/mount.ts` 用 MutationObserver 在 hero 阶段重建、离开阶段移除、释放时整体拆除，并持有页签／范围状态（点击后按当前快照重画，重复点当前项是空操作）。数据不再来自样例：Host 半注册 `ccdUsage` 投影单元（纯函数折叠每条会话日志：真人提示、含缓存命中的 token 总量、按天／按小时／按模型／按天×模型，另存输入输出计数），用 `ctx.sessionProjectionCache` 的 durable 检查点做零 I/O 读取、缺失时后台冷折一次并写回，再把三档范围与图表数据一起挂在 `ctx.connection.fetch` 的 `/api/ccd-stats` 上；浏览器半按 `pending` 决定轮询节奏，首次全部冷折完成前不画卡片（避免闪一屏 0）。开关仍默认关闭：插件启用后聚合常驻，`features.statistics` 只控制卡片显示（不需要重启）。规格、数据方案与实现记录见 [统计卡片调研](STATS_RESEARCH.md)，验证见 [验证记录](VERIFICATION.md)。
+- 统计卡片（`statistics`，默认关闭）挂在问候块下方 20px 处、与标题左对齐（左缘取 `50% - Composer 卡宽 / 2`），宽 480px，三段结构与参考同构：header（`Overview`／`Models` 与 `All`／`30d`／`7d` 两组分段控件，20px 高、激活项 `#e6e6e6`、13px medium）→ body（`Overview`：3×2 统计格，44px 高、`#dadada`、5px 圆角；26×7 贡献热力图，格距 3px、四档 `hsl(217 70% 72／64／56／48%)`；底部一行书比对文案，11/17、`pt-4`。`Models`：160px 堆叠柱状图，柱宽为天列 72%，y 轴刻度按参考的步长搜索，x 标签按容器宽度实测抽稀；下方图例为 8px 色块＋模型名＋终身 `{in} in · {out} out`＋范围占比，超过 6 行折叠成 `Show N more`）；卡片顶到统计格顶约 41px（8px 内边距 + 20px header + 8px 间距），tiles／heat／文案同属 body、彼此 6px。热力图与柱状图悬浮时弹参考那颗深色提示（`#0c0c0c`、圆角 6、24px 行高、锚点上方 4px、以窗口为碰撞边界）。颜色取自 `theme/tokens.css` 的 `--ccd-stats-*`（含模型 6 档色阶与提示底色），深浅两套都在那里。问候块高度随字号与语言变化，所以卡片偏移由 `mount.ts` 实测问候块高度后写进 `--ccd-stats-gap`，不写死。DSH 的 hero 区只有 `conversation.hero.brand.mark／workspace／agent` 三个小座位，没有承载整块卡片的插槽，所以卡片自持容器：插进 `.ST7X_W_composerStack`（问候块的父容器）、与问候块共用绝对定位坐标系，`compat/host-dom.ts` 登记 `heroComposerStack` 锚点，`features/statistics/mount.ts` 用 MutationObserver 在 hero 阶段重建、离开阶段移除、释放时整体拆除，并持有页签／范围状态（点击后按当前快照重画，重复点当前项是空操作）。数据不再来自样例：Host 半注册 `ccdUsage` 投影单元（纯函数折叠每条会话日志：真人提示、含缓存命中的 token 总量、按天／按小时／按模型／按天×模型，另存输入输出计数），用 `ctx.sessionProjectionCache` 的 durable 检查点做零 I/O 读取、缺失时后台冷折一次并写回，再把三档范围与图表数据一起挂在 `ctx.connection.fetch` 的 `/api/ccd-stats` 上；浏览器半按 `pending` 决定轮询节奏，首次全部冷折完成前不画卡片（避免闪一屏 0）。开关仍默认关闭：插件启用后聚合常驻，`features.statistics` 只控制卡片显示（不需要重启），配置页「模块」里有一行可以开关。规格、数据方案与实现记录见 [统计卡片调研](STATS_RESEARCH.md)，验证见 [验证记录](VERIFICATION.md)。
 
 ## 聊天页与共用 Composer
 
 入口：`src/client/features/conversation/`；共用输入区几何在 `src/client/theme/composer.css`。
 
 - 正文列宽 770px；调整消息气泡、工具行、推理行与代码块观感，保留原生滚动、执行、授权与工具展开。
+- 正文末尾的「回到底部」控件（宿主 `ui-chat` 的 `ChatView` 浮层按钮）从输入卡右上角移到正文列中间，并收到 22px（`--ccd-to-bottom-size`，仍为圆形）——它原本和输入框小鲸鱼压在同一个角。按钮本体、chevron、`aria-label`、回调与浮层表面仍是宿主的，它到输入卡上沿的 16px 间距逐像素不变。
 - 助手正文链接常驻蓝色实线下划线；文件链接和行内路径仍使用官方导航回调。行内代码采用红色等宽字、浅灰底、1px 细边框与 5px 圆角，长标识符在列宽内换行；粗体沿用 600 字重。样式不覆盖紧凑推理／工具 Markdown、用户引用或 Composer，代码块保留原生高亮与复制入口。
 - 助手正文表格是单张圆角卡片：1px 外框、表头浅灰填充、表头下一条略深的分隔线、行间发丝线，没有竖线；单元格 4px／10px 内边距，表格文字与正文同为 14px／24px，行距 33px，首行与末行的边框由卡片自己收口。列对齐（`:---`／`:---:`／`---:`）仍由宿主 Markdown 决定。样式同样只作用于助手正文，紧凑推理／工具 Markdown 与用户消息保留原生表格。四列及以上时宿主会给包装层加 `md-table-wide` 并把它撑到滚动视口的整个内容宽度（表头左缘仍钉回正文列），而这里的 Composer 与正文列同宽，借用出来的那截会顶出输入框；因此插件把该包装层收回正文列（`width`／`padding-left`／`margin-left` 归零），表格与输入框左右缘对齐，宿主自己的 `md-table-wide` 悬停横向滚动保留给「列的下限都放不进」的表格（例如 8 列：宿主每格 `min-width: 100px`）。
 - 助手正文代码块是单张白底圆角卡片：1px 外框（`--ccd-border`）与 6px 圆角（`--ccd-code-radius`，与表格卡片同一条参考曲线）。宿主用同一层冷灰分别给外壳、语言横幅和 `pre` 上色，横幅的外包裹层还会回落到页面 token，因此这四层都被重绘成纯白卡片（`--ccd-card`）＋透明内层，不再出现偏蓝的底色；语法高亮、语言标签、换行与复制按钮仍由宿主提供。样式同样只作用于助手正文。
@@ -68,13 +73,26 @@
 
 兼容层负责菜单翻转、统计几何、视图滑块、账号展示、提示语适配、正文边缘渐隐状态与顶栏「打开方式」的模式标注。顶栏两个新增视图的注册入口在 `src/client/features/conversation/header-actions/`；选择器来源和版本依赖见 [兼容说明](DSH_COMPATIBILITY.md)。
 
+## 输入框小鲸鱼
+
+入口：`src/client/features/composer-pet/`（组件与注册）、`src/client/compat/pet-anchor.ts`（新建页量测）、`src/client/compat/pet-labels.ts`（无障碍名）。
+
+- 一只 32×24 像素网格手绘的 DeepSeek 小鲸鱼，按 1:1 渲染成 32×24 CSS px（`shapeRendering="crispEdges"`，Retina 上一格正好两个设备像素，缩放时仍落在整设备像素上）：蓝色主体、浅色腹部、**靠近尾部**的眼睛、右侧上扬的分叉尾鳍、下方胸鳍。形象取自 DeepSeek 品牌鲸鱼（蓝身、浅腹、亮眼、斜掠胸鳍、上扬尾），**不引入任何第三方宠物素材**；三个开源 DSH 桌宠（seek-on-dsh／whale-on-desk／pet-clawd，均 MIT）只作状态处理的参考，取舍见 [宠物调研](PET_RESEARCH.md)。尺寸与位置按用户给的 Claude 参考窗口比例定：角色只有输入卡高度的一半上下，贴在卡片顶边右角，不压住上方任何一行。两种墨色是品牌色对（`--ccd-pet-blue`／`--ccd-pet-light`），浅色 `#4d6bfe`／`#dfe6ff`、深色 `#7b93ff`／`#e8ecff`，都只出现在 `theme/tokens.css`。
+- **一个座位，只在新会话页。** 鲸鱼按 Claude 的机制出场：**新会话页有它，一开聊就消失**。这个判据不是插件自己算的——DSH 在会话根上写了 `data-phase`，固定版本的会话包算的是 `phase = settling ? "settling" : hero ? "hero" : "active"`，其中 `hero = sessionId === void 0 || (shellPhase === "blank" && (openState === "open" || summaryBlank === true))`，也就是「还没有会话，或者会话一条消息都没发过」；第一条消息落盘后根节点就变成 `active`。`compat/pet-anchor.ts` 量测的选择器 `.ST7X_W_root[data-phase="hero"] [data-composer-card]` 因此同时是**量测**和**闸门**：`active` 页上没有卡片可量，锚点发布 null，鲸鱼根本不存在。座位本身画在帧级浮层 `shell.overlay` 上（`BlankPet` + `.ccd-pet-blank-seat`，`position: fixed`），位置是卡片顶边右角的 `right - 44`、`top - 24`。没有卡片、卡片未布局、页面隐藏时同样不画；锚点只读宿主 DOM，不写任何属性，观察器、窗口与文档监听都随作用域释放。
+  **卡片内那个座位已经删掉**：`conversation.input.overlay` 只在有 Session 时渲染（固定版本 `InputBar` 用 `sessionId !== void 0` 守着），正是「已经开始聊天」的那一页，注册在那里等于把鲸鱼放回每个对话。`DSH_SLOTS` 里不再保留这个名字。
+- **卡片上方有别的行就不出场，排队消息也一样。** 鲸鱼住在卡片顶边之上那块空间里，所以 Composer 栈里只要多出一行，整块座位就收起：宿主自己的 dock 条目（待办面板、排队消息）以及任何别的插件放进来的行。只有两行例外——空白页自己的问候块（`.bocITq_root`）与工作区芯片行（`.ST7X_W_heroWorkspaceRow`）：芯片在左、鲸鱼在右，互不相干，Claude 参考窗口里也是这么共存的。规则写在 `pet.css`，判据是「卡片之前还有一个既不是这两行、也不是卡片自己的子元素」，所以挂在卡片**之后**的统计卡片不会误伤；因为座位画在帧级浮层里（不是栈的后代），`:has()` 挂在文档根上而不是栈上；四个类名就是 `compat/host-dom.ts` 里登记的那四个（`composerStack`／`heroRoot`／`heroWorkspaceRow`／`composerRoot`），样式表按本仓库既有约定重复写出字面量——`check:architecture` 只查 CSS 的颜色归属、不核对这份重复，所以宿主改哈希后这条规则会**静默失效**（鲸鱼重新压到 dock 行上），升级核对点记在 [待办](TECH_DEBT.md)。
+- **排队中的消息走另一条路，单独一条规则。** 还在等待发送的消息不是 Composer 的行：DSH 把它画成正文末尾一条回显用户气泡（`PendingSubmissionBubble` → `UserStyleBubble` 的 `data-submission-echo`，转向中的是 `data-pending-steering`），位置正好是鲸鱼所在的那个右上角。气泡带着这两个宿主自己的属性直到消息被受理，所以鲸鱼在它出现期间整块收起（帧级座位也一并管上）；属性消失即恢复。属性名来自安装包里的 `UserStyleBubble`，是稳定属性而非哈希类名。
+- **只有一个姿态，而且不可点。** 待机：眨眼（7.8s 一次）、尾鳍偶尔抬一格（11s 一次）。它不读会话、不持有状态、没有计时器，组件里唯一的 state 是「页面是否隐藏」。**点击没有任何反应**：组件里没有点击处理、没有计时器、没有自己的状态（只有一个「页面是否隐藏」的开关），`Whale` 包在 `aria-hidden` 的 `<span>` 里，座位与图形都是 `pointer-events: none`——那个角落的按下会像鲸鱼不存在一样落到它下面的正文上，也不会触发卡片的「未选工作区即点开选择器」。用户曾要求做点击喷水（先是挤压／弹跳，再是像素水柱，最后按参考动画改成六帧水花），三次都不满意，最终决定整个撤掉，见[验证记录](VERIFICATION.md)；要再拾起来时，`Whale.tsx` 的图形与 `pet.css` 的动画层是干净的两层，加回反应只需在组件里加状态。页面隐藏时暂停动画（`data-paused`）；`prefers-reduced-motion` 下保留姿态、去掉运动。工作姿态（摆尾游动）随会话座位一起删掉了——新会话页没有可读的会话状态，留着就是死代码；等待用户／长时间空闲等姿态同样**没有做**，按 [宠物调研](PET_RESEARCH.md) 的约定不杜撰。
+- 开关 `features.composer-pet` 默认开启，在配置页的「模块」里可以关掉。
+
 ## 配置与设置页
 
 入口：`src/host/index.ts`（Config）、`src/shared/config.ts`（规范化）、`src/client/theme/`（token 计算）、`src/client/features/settings/`（页面）。
 
 - 用户在侧栏「插件」→ `dsh-ccd-style` → 组件行 `ui-skin-ccd-style` 打开配置页；页面属于插件自己的行配置插槽，**关闭界面后仍然存在**，可以随时开回来。主题行也照常可用：它写的是宿主的偏好，不属于本插件的启用状态。
-- 界面上的可配置项只保留当前有意义的：总开关 `enabled`、四个已实现模块的开关、「外观 → 主题」、`appearance.canvas`／`appearance.sidebar`、`fonts.uiLatin`（界面字体）与 `fonts.code`（代码字体）。行里不放说明文字，页脚在没有写入时保持空白，只在写入中／已保存／被拒绝时出现一行状态；唯一的例外是两个背景色行下方那行灰色说明（`.ccd-settings-note`）：「自定义背景色只作用于浅色模式；深色模式使用内置深色调色板。」它说的是这对字段的作用域，所以挂在两行之后，而不是每行重复一次。
-- 只走 YAML 的进阶字段：`debug`（控制台排障日志）、`fonts.uiCjk`（西文与中文分开指定时才需要）、`features.tool-calls`（尚未实现）、`features.statistics`（卡片与真实数据都已接，Host 聚合随插件启用常驻）。它们仍在 Host schema 里，配置页不展示。
+- 界面上的可配置项只保留当前有意义的：总开关 `enabled`、六个已实现模块的开关（shell／sidebar／new-session／conversation／composer-pet／statistics）、「外观 → 主题」、`appearance.canvas`／`appearance.sidebar`、`fonts.uiLatin`（界面字体）与 `fonts.code`（代码字体）。行里不放说明文字，页脚在没有写入时保持空白，只在写入中／已保存／被拒绝时出现一行状态；唯一的例外是两个背景色行下方那行灰色说明（`.ccd-settings-note`）：「自定义背景色只作用于浅色模式；深色模式使用内置深色调色板。」它说的是这对字段的作用域，所以挂在两行之后，而不是每行重复一次。
+- `statistics` 这一行只切换卡片显示（默认关闭）：Host 半的聚合与路由随插件启用常驻，所以打开卡片不需要重启，页面上也没有别的说明文字。
+- 只走 YAML 的进阶字段：`debug`（控制台排障日志）、`fonts.uiCjk`（西文与中文分开指定时才需要）、`features.tool-calls`（尚未实现）。它们仍在 Host schema 里，配置页不展示。
 - **即时生效，没有保存按钮**：开关、色块、字体选择一改就提交一次原子 `mutate`，写入当前 profile 的 `cordis.patch.yml`；文本字段（十六进制色值、字体族名）在失焦或回车时提交，避免半截输入到达设置边界。页脚只留一行状态（即时生效说明／写入中／已保存／被拒绝），失败时不改动界面值。
 - 页面自己校验：颜色须为 `#rgb`／`#rrggbb`（提交前归一成小写六位），字体名只允许字母、数字、空格与 `._-`、长度 ≤64，非法值就地提示且不写盘；Host 的 schema `pattern` 是第二道闸，`adoptConfig` 对手改 YAML 兜底（永不抛错）。
 - 「外观 → 主题」是宿主主题偏好的另一个入口（跟随系统／浅色／深色三格，16px 图标按钮住在 92×32 的槽里，选中格抬起成 1px 描边的卡片）。槽与选中格读 `--ccd-track`／`--ccd-card`／`--ccd-border-soft`，并带宿主 token 兜底，因此启用时与参考图一致（浅色槽 #f3f3f2、选中格纯白；深色槽 #1f1e1d、选中格 #30302e），插件关闭时这页仍按宿主调色板可读。它读 `getTheme().preference`、写 `setTheme()`、订阅 `theme/change`，本身不保存任何值，也不会与宿主自己的 Appearance 行不一致；箭头键在组内移动选择并循环。

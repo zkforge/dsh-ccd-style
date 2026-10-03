@@ -15,6 +15,8 @@ export const DSH_SLOTS = Object.freeze({
   composerDock: 'conversation.composer.dock',
   toolView: 'tool.call.toolview',
   leading: 'shell.leading',
+  /** Frame-wide floating layer, click-through until an entry opts back in. */
+  shellOverlay: 'shell.overlay',
 } as const);
 
 export const OVERRIDE_PRIORITY = -10;

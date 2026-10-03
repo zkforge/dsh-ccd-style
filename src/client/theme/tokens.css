@@ -19,8 +19,10 @@ html[data-dsh-ccd-style="true"] {
   --ccd-sidebar-inline-padding: 10px;
   --ccd-sidebar-bottom-padding: 8px;
   --ccd-row-height: 28px;
-  --ccd-nav-row-height: 30px;
-  --ccd-nav-gap: 2px;
+  /* Navigation stack. The reference's three rows measured 26px tall on a 26.5px
+     pitch — contiguous, not separated — against the host's own 36px/7px row. */
+  --ccd-nav-row-height: 26px;
+  --ccd-nav-gap: 1px;
   --ccd-radius-row: 8px;
   --ccd-radius-panel: 12px;
   /* Assistant table card. The reference crop's corner curve fits a 12-device-px
@@ -67,6 +69,11 @@ html[data-dsh-ccd-style="true"] {
      viewer uses for `fadeTop`／`fadeBottom`, so the whole interface softens its
      scroll viewport edges by the same amount. */
   --ccd-edge-fade: 24px;
+  /* Jump-to-bottom control. The reference's own affordance measures 40×44
+     device px at @2x — a ~21px mark above the Composer — against the host's
+     34px floating circle, so the box shrinks to this one step while the glyph
+     inside it keeps the host's 16px seat. */
+  --ccd-to-bottom-size: 22px;
 
   /* Surfaces */
   --ccd-canvas: #fcfcfb;
@@ -92,6 +99,12 @@ html[data-dsh-ccd-style="true"] {
   --ccd-text-secondary: #6f6f6a;
   --ccd-text-muted: #8f8f8a;
   --ccd-text-placeholder: #89877f;
+  /* One step below full strength: a row that is not the current one. The
+     reference paints its inactive navigation rows at #4a4a47 — between this
+     palette's --ccd-text and --ccd-text-secondary — and keeps the current row
+     at full black, so the stack reads as one current entry plus quieter
+     neighbours instead of three equally loud labels. */
+  --ccd-text-nav: #4a4a47;
 
   /* New-session statistics card. The reference panel is a stacked translucent
      grey: the card is 5% black over the canvas and a stat tile (and an empty
@@ -176,6 +189,28 @@ html[data-dsh-ccd-style="true"] {
   --ccd-icon-terminal: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16' fill='none'%3E%3Cpath d='M3 4L7 8L3 12' stroke='black'/%3E%3Cpath d='M9 12H13' stroke='black'/%3E%3C/svg%3E");
   --ccd-icon-browser: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16' fill='none'%3E%3Cpath d='M7.99986 14.0887C11.3626 14.0887 14.0886 11.3627 14.0886 7.99998C14.0886 4.63727 11.3626 1.91125 7.99986 1.91125C4.63715 1.91125 1.91113 4.63727 1.91113 7.99998C1.91113 11.3627 4.63715 14.0887 7.99986 14.0887Z' stroke='black'/%3E%3Cpath d='M2.34619 8H13.6538' stroke='black' stroke-linecap='square'/%3E%3Cpath d='M7.99976 14.0889C9.23509 14.0889 10.1743 11.3629 10.1743 8.00006C10.1743 4.63739 9.23509 1.91138 7.99976 1.91138' stroke='black'/%3E%3Cpath d='M7.99973 14.0889C6.76445 14.0889 5.8252 11.3629 5.8252 8.00006C5.8252 4.63739 6.76445 1.91138 7.99973 1.91138' stroke='black'/%3E%3C/svg%3E");
 
+  /* A bare plus, the one glyph the reference repeats on every actionable row.
+     It is DSH's own `IconPlusOutlineArtwork` geometry (ui-primitives, MIT): two
+     1px strokes across a 16px box, so the plugin can put the same mark on the
+     Workspace header's add button and on a project row's create button without
+     authoring artwork of its own. */
+  --ccd-icon-plus: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16' fill='none'%3E%3Cpath d='M8 2V14' stroke='black'/%3E%3Cpath d='M2 8H14' stroke='black'/%3E%3C/svg%3E");
+
+  /* The reference's disclosure mark is a 1px line chevron where the host draws a
+     filled triangle; this is DSH's own `IconChevronRightOutlineArtwork` geometry
+     (ui-primitives, MIT). It is painted over the host's mark slot, so the host's
+     own `arrowOpen` state still drives the quarter turn. */
+  --ccd-icon-chevron-right: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16' fill='none'%3E%3Cpath d='M6 12L9.29289 8.70711C9.68342 8.31658 9.68342 7.68342 9.29289 7.29289L6 4' stroke='black'/%3E%3C/svg%3E");
+
+  /* The Composer whale. DeepSeek's own mark is a blue whale with a pale belly,
+     so the two inks are the brand pair rather than a derived palette step: the
+     artwork only ever appears as this one mark. The dark side lifts the blue a
+     step so it keeps its contrast on the dark canvas instead of sinking into
+     it; the belly stays the light ink in both schemes, because it is what makes
+     the silhouette read at 64px. */
+  --ccd-pet-blue: #4d6bfe;
+  --ccd-pet-light: #dfe6ff;
+
   /* Elevation */
   --ccd-shadow-card: 0 1px 2px rgb(0 0 0 / 4%);
   --ccd-shadow-segment: 0 1px 2px rgb(0 0 0 / 8%);
@@ -223,7 +258,15 @@ html[data-dsh-ccd-style="true"] body[data-ds-dark-theme] {
   --ccd-text: #f0efec;
   --ccd-text-secondary: #b4b1ab;
   --ccd-text-muted: #918f89;
+  /* Same step down from full strength as the light palette: the dark ink sits
+     the same distance below --ccd-text as #4a4a47 sits below #1f1f1d. */
+  --ccd-text-nav: #d3d0ca;
   --ccd-text-placeholder: #8b8983;
+
+  /* Composer whale, dark side: the same mark, with the blue raised so it reads
+     against this canvas; the belly keeps the light ink. */
+  --ccd-pet-blue: #7b93ff;
+  --ccd-pet-light: #e8ecff;
 
   /* Statistics card, dark side: the same stacked greys over this canvas, and
      the heat ramp raised one step so the steps stay visible on a dark panel. */

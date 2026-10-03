@@ -59,7 +59,14 @@ const THEME_KEYS: Record<ThemePreference, SettingsKey> = {
 };
 
 /** Modules the page offers: the ones that actually mount something today. */
-const OFFERED_FEATURES: readonly FeatureId[] = ['shell', 'sidebar', 'new-session', 'conversation'];
+const OFFERED_FEATURES: readonly FeatureId[] = [
+  'shell',
+  'sidebar',
+  'new-session',
+  'conversation',
+  'composer-pet',
+  'statistics',
+];
 
 const FEATURE_KEYS: Record<FeatureId, SettingsKey> = {
   shell: 'feature.shell',
@@ -68,6 +75,7 @@ const FEATURE_KEYS: Record<FeatureId, SettingsKey> = {
   conversation: 'feature.conversation',
   'tool-calls': 'feature.tool-calls',
   statistics: 'feature.statistics',
+  'composer-pet': 'feature.composer-pet',
 };
 
 /**

@@ -32,6 +32,7 @@ export const Config = z.object({
     conversation: z.boolean().default(DEFAULT_FEATURES.conversation),
     'tool-calls': z.boolean().default(DEFAULT_FEATURES['tool-calls']),
     statistics: z.boolean().default(DEFAULT_FEATURES.statistics),
+    'composer-pet': z.boolean().default(DEFAULT_FEATURES['composer-pet']),
   }).default({ ...DEFAULT_FEATURES }).description('按模块启用').volatile(),
   /* One volatile node per section, exactly like `features`: Cordis rejects a
      volatile field nested inside another volatile field ("volatile fields

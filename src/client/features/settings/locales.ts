@@ -47,7 +47,8 @@ export const zh = {
   'feature.new-session': '新建页',
   'feature.conversation': '聊天页',
   'feature.tool-calls': '工具调用展示',
-  'feature.statistics': '常驻统计',
+  'feature.statistics': '统计卡片',
+  'feature.composer-pet': '输入框小鲸鱼',
 } as const;
 
 export type SettingsKey = keyof typeof zh;
@@ -91,7 +92,8 @@ export const en: Record<SettingsKey, string> = {
   'feature.new-session': 'New session',
   'feature.conversation': 'Conversation',
   'feature.tool-calls': 'Tool call presentation',
-  'feature.statistics': 'Persistent statistics',
+  'feature.statistics': 'Statistics card',
+  'feature.composer-pet': 'Composer whale',
 };
 
 declare module '@deepseek-ai/dsh-client-ui-slots' {

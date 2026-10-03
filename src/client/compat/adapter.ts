@@ -1,8 +1,10 @@
 import type { Context } from '@deepseek-ai/cordis';
+import type {} from '@deepseek-ai/dsh-api-session-controller/client';
 import type {
-  ConfigFormPort, ConfigFormsPort, HostServices, ThemePreferencePort,
+  BlankSessionsPort, ConfigFormPort, ConfigFormsPort, HostServices, ThemePreferencePort,
 } from '../contracts/ports.ts';
 import { TARGET_DSH_VERSION } from '../../shared/identity.ts';
+import { blankSessionIds } from './blank-session-rows.ts';
 
 /**
  * `ctx.configForms` is provided by the DSH settings layer
@@ -52,6 +54,28 @@ export function createThemePreferencePort(ctx: Context): ThemePreferencePort | n
   };
 }
 
+/**
+ * Build the provisional-New-Session face over the client session list.
+ *
+ * `ctx.sessions.list` is the Session Controller's catalog store and the only
+ * source of the `blank` fact the column filters on; the Host owns the flag and
+ * the plugin neither writes nor mirrors it. `sessions` is declared in the
+ * plugin's own `inject` list, so the service is resolved rather than probed. A
+ * build whose list lacks these two members yields null and the native rows stay
+ * exactly as they are — the column loses a presentation filter, not its list.
+ *
+ * @param ctx - client context carrying the session service.
+ * @returns the port, or null when this build does not publish a session list.
+ */
+function resolveBlankSessions(ctx: Context): BlankSessionsPort | null {
+  const list = ctx.sessions?.list;
+  if (typeof list?.getSnapshot !== 'function' || typeof list.subscribe !== 'function') return null;
+  return {
+    ids: () => blankSessionIds(list.getSnapshot()),
+    subscribe: listener => list.subscribe(listener),
+  };
+}
+
 /** This compatibility boundary targets the pinned SDK, not arbitrary DSH versions. */
 export function createHostServices(ctx: Context): HostServices {
   const slots = ctx.slots;
@@ -66,6 +90,7 @@ export function createHostServices(ctx: Context): HostServices {
     slots,
     theme,
     themePreference: createThemePreferencePort(ctx),
+    blankSessions: resolveBlankSessions(ctx),
     configForms: resolveConfigForms(ctx),
     workspace: {
       openSession: target => workspace.openSession(target),

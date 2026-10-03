@@ -7,6 +7,7 @@ import { join } from 'node:path';
 import { runInNewContext } from 'node:vm';
 import { FEATURE_IDS } from '../src/shared/config.ts';
 import { PLUGIN_ID, TARGET_DSH_VERSION } from '../src/shared/identity.ts';
+import { ANCHOR } from '../src/client/compat/host-dom.ts';
 import { BASELINE_MODULES } from './lib/platform.mjs';
 
 const root = fileURLToPath(new URL('../', import.meta.url));
@@ -24,6 +25,8 @@ let observersOpened = 0;
 let observersClosed = 0;
 let listenersOpened = 0;
 let listenersClosed = 0;
+let documentListenersOpened = 0;
+let documentListenersClosed = 0;
 const sandbox = {
   window: {
     __ModuleLoader__: { load(row) { assert.equal(registration, undefined); registration = row; } },
@@ -57,6 +60,22 @@ sandbox.ResizeObserver = FakeObserver;
 sandbox.requestAnimationFrame = callback => setTimeout(callback, 0);
 sandbox.cancelAnimationFrame = handle => clearTimeout(handle);
 sandbox.getComputedStyle = () => ({ position: 'static', gridTemplateColumns: '' });
+/* The blank-session Composer card the whale is measured from; a plain box, so
+   the anchor's read-and-publish path runs against something shaped like the
+   host's card rather than against nothing. */
+let heroCard = null;
+/** One keyed Session row of the Workspace browser, as the sidebar tags it. */
+function fakeSessionRow(key) {
+  const rowAttributes = new Map([['data-row-key', key]]);
+  return {
+    isConnected: true,
+    getAttribute: name => rowAttributes.get(name) ?? null,
+    setAttribute: (name, value) => rowAttributes.set(name, value),
+    hasAttribute: name => rowAttributes.has(name),
+    removeAttribute: name => rowAttributes.delete(name),
+  };
+}
+const [chatRow, blankRow] = [fakeSessionRow('session:session-1'), fakeSessionRow('session:session-2')];
 sandbox.document = {
   documentElement: {
     getAttribute: key => attributes.get(key) ?? null,
@@ -64,13 +83,20 @@ sandbox.document = {
     removeAttribute: key => attributes.delete(key),
   },
   body: {},
-  querySelector: () => null,
-  querySelectorAll: () => [],
+  hidden: false,
+  querySelector: selector => (selector === ANCHOR.composerCardHero ? heroCard : null),
+  querySelectorAll: selector => (selector === ANCHOR.sessionRows ? [chatRow, blankRow] : []),
+  addEventListener() { documentListenersOpened += 1; },
+  removeEventListener() { documentListenersClosed += 1; },
   createElement: () => {
     const style = { dataset: {}, textContent: '', remove: () => styles.delete(style) };
     return style;
   },
   head: { appendChild: style => styles.add(style) },
+};
+heroCard = {
+  getBoundingClientRect: () => ({ top: 500, right: 800, width: 770, height: 120 }),
+  querySelector: () => null,
 };
 /** Minimal settings transport: one section, one subscriber list. */
 function createConfigForms(initial) {
@@ -92,11 +118,14 @@ let teardown;
 let paletteLayers = 0;
 const modelSeats = new Set();
 const headerViews = new Set();
+/** The Composer whale's one overlay seat, and the scope that owns it. */
+const blankPetSeats = new Set();
 /** The row configuration page and its dictionary outlive the activation scope. */
 const rowConfigPages = new Set();
 const dictionaries = [];
 let modelScopes = 0;
 let headerScopes = 0;
+let petScopes = 0;
 let settingsScopes = 0;
 const openedKinds = [];
 const focusedTabs = [];
@@ -119,6 +148,7 @@ const slots = {
     assert.ok([
       'conversation.input.model',
       'conversation.session.header.utilities',
+      'shell.overlay',
       'plugins.row.config',
     ].includes(name), `unexpected slot: ${name}`);
     return register();
@@ -135,6 +165,14 @@ const slots = {
       modelSeats.add(options);
       return () => modelSeats.delete(options);
     }
+    if (options.name === 'shell.overlay') {
+      // The whale's only seat: it lives on the new-session page, and the anchor
+      // that places it is also what keeps it off every conversation.
+      assert.equal(typeof options.inject, 'function');
+      assert.equal(options.id, 'ccd-blank-pet');
+      blankPetSeats.add(options);
+      return () => blankPetSeats.delete(options);
+    }
     assert.equal(options.name, 'conversation.session.header.utilities');
     // The added views sit ahead of the native session menu (order 0) and behind
     // the native open control (-10) and scheduled tasks (-5).
@@ -142,6 +180,16 @@ const slots = {
     assert.equal(typeof options.inject, 'function');
     headerViews.add(options);
     return () => headerViews.delete(options);
+  },
+};
+/** The browser's session list store: the whale's running flag and the sidebar's
+    provisional-row filter both read this one host fact. */
+const sessionRows = { 'session-1': { running: true }, 'session-2': { blank: true } };
+const sessionListeners = new Set();
+const sessions = {
+  list: {
+    getSnapshot: () => ({ ids: ['session-1', 'session-2'], byId: sessionRows }),
+    subscribe(listener) { sessionListeners.add(listener); return () => sessionListeners.delete(listener); },
   },
 };
 const disabled = { enabled: false, features: Object.fromEntries(FEATURE_IDS.map(id => [id, false])) };
@@ -172,46 +220,75 @@ const settingsScope = {
   },
 };
 const configForms = createConfigForms(disabled);
-client.apply({
+/** The services the loader hands this entry: exactly the ones `inject` names. */
+const declaredServices = new Set(client.inject);
+const rootServices = {
   slots,
-  inject(dependencies, mount) {
-    const names = Array.from(dependencies).join(',');
-    let release;
-    let scope;
-    if (names === 'slots,sidebarRight,sidebarRightTabs') {
-      scope = 'header';
-      release = mount({ slots, sidebarRight, sidebarRightTabs });
-      headerScopes += 1;
-    } else if (names === 'modelDirectories,sessions,slots,remote,remote.session') {
-      scope = 'model';
-      release = mount({ slots });
-      modelScopes += 1;
-    } else {
-      assert.equal(names, 'slots,locale', 'unexpected injection');
-      scope = 'settings';
-      release = mount(settingsScope);
-      settingsScopes += 1;
-    }
-    let disposed = false;
-    return {
-      dispose() {
-        if (disposed) return;
-        disposed = true;
-        release();
-        if (scope === 'header') headerScopes -= 1;
-        else if (scope === 'model') modelScopes -= 1;
-        else {
-          settingsScopes -= 1;
-          for (const effect of settingsEffects.splice(0).reverse()) effect();
-        }
-      },
-    };
-  },
   theme: { overrideTokens() { paletteLayers++; return () => { paletteLayers--; }; } },
   uiWorkspace: { startSession() {} },
   configForms,
-  effect: execute => { teardown = execute(); },
+  sessions,
+};
+/** One child injection, with the scope the real Cordis fiber would expose. */
+function injectService(dependencies, mount) {
+  const names = Array.from(dependencies).join(',');
+  let release;
+  let scope;
+  if (names === 'slots,sidebarRight,sidebarRightTabs') {
+    scope = 'header';
+    release = mount({ slots, sidebarRight, sidebarRightTabs });
+    headerScopes += 1;
+  } else if (names === 'modelDirectories,sessions,slots,remote,remote.session') {
+    scope = 'model';
+    release = mount({ slots });
+    modelScopes += 1;
+  } else if (names === 'slots') {
+    scope = 'pet';
+    release = mount({ slots });
+    petScopes += 1;
+  } else {
+    assert.equal(names, 'slots,locale', 'unexpected injection');
+    scope = 'settings';
+    release = mount(settingsScope);
+    settingsScopes += 1;
+  }
+  let disposed = false;
+  return {
+    dispose() {
+      if (disposed) return;
+      disposed = true;
+      release();
+      if (scope === 'header') headerScopes -= 1;
+      else if (scope === 'model') modelScopes -= 1;
+      else if (scope === 'pet') petScopes -= 1;
+      else {
+        settingsScopes -= 1;
+        for (const effect of settingsEffects.splice(0).reverse()) effect();
+      }
+    },
+  };
+}
+/*
+ * Cordis refuses to resolve a service the entry did not declare — reading it
+ * throws `cannot get property "<name>" without inject`, and because that read
+ * happens while the plugin is being assembled, the throw takes the whole entry
+ * down instead of one feature. The fixture therefore resolves services the same
+ * way: only names declared in the bundle's own `inject` are readable, and
+ * anything else fails loudly here rather than silently in the application.
+ */
+const rootCtx = new Proxy(rootServices, {
+  get(target, property, receiver) {
+    if (property === 'inject') return injectService;
+    if (property === 'effect') return execute => { teardown = execute(); };
+    if (typeof property !== 'string' || !(property in target)) {
+      throw new Error(`the plugin read an unknown context property: ${String(property)}`);
+    }
+    assert.ok(declaredServices.has(property),
+      `the plugin reads ctx.${property} but does not declare it in inject`);
+    return Reflect.get(target, property, receiver);
+  },
 });
+client.apply(rootCtx);
 assert.equal(attributes.has('data-dsh-ccd-style'), false, 'a disabled section must not restyle the interface');
 /* Only the configuration page is mounted while the interface is off: it is how
    the interface gets switched back on from inside the app. */
@@ -232,6 +309,9 @@ assert.equal(modelScopes, 1);
 assert.equal(headerViews.size, 2);
 assert.equal(headerScopes, 1);
 assert.equal(styles.size, 7); // page + theme + Composer + model controls + effort + conversation + header actions
+/* The whale has its own switch, so the conversation feature alone mounts none. */
+assert.equal(blankPetSeats.size, 0);
+assert.equal(petScopes, 0);
 /* The added header views open their right-panel kind, and focus the Session's
    existing tab of that kind instead of stacking a second one. */
 const terminalView = [...headerViews].find(view => view.id === 'ccd-terminal');
@@ -253,6 +333,38 @@ assert.equal(headerViews.size, 2);
 configForms.published({ ...disabled, enabled: true, features: { ...disabled.features, conversation: true } });
 assert.equal(modelSeats.size, 1);
 assert.equal(headerViews.size, 2);
+/* The Composer whale: one switch, one overlay seat, on the new-session page
+   only. The seat belongs to that page's own layout, so it arrives with
+   `new-session` — and the compat anchor measures the card under
+   `data-phase="hero"` instead of assuming it, which is also what keeps the pet
+   out of every conversation. */
+configForms.published({
+  ...disabled,
+  enabled: true,
+  features: { ...disabled.features, conversation: true, 'new-session': true, 'composer-pet': true },
+});
+assert.equal(blankPetSeats.size, 1);
+assert.equal(petScopes, 1);
+// page + theme + Composer + model controls + effort + conversation + header actions + new session + pet
+assert.equal(styles.size, 9);
+const petFace = [...blankPetSeats][0].inject();
+// The pet is decoration: the seat injects the measured corner and nothing else
+// — no session, no reaction state, no timer, no copy.
+assert.deepEqual(Object.keys(petFace), ['useAnchor']);
+assert.equal(typeof petFace.useAnchor, 'function');
+assert.ok(documentListenersOpened > 0, 'the frame-wide seat must observe the card');
+/* The provisional New Session row: the column keeps the host's blank Session
+   out of the list and leaves the real rows alone; the tag is a resource of the
+   sidebar scope, so disabling the interface takes it back off the row. */
+const beforeSidebarStyles = styles.size;
+configForms.published({ ...disabled, enabled: true, features: { ...disabled.features, sidebar: true } });
+assert.equal(blankRow.getAttribute('data-ccd-blank-session'), '', 'the blank Session row must be tagged');
+assert.equal(chatRow.getAttribute('data-ccd-blank-session'), null, 'a real Session row stays in the list');
+/* The sidebar feature mounts its column stylesheet and the account-menu sheet. */
+assert.equal(styles.size, 5);
+assert.ok(beforeSidebarStyles > styles.size, 'the previous feature scope was released first');
+configForms.published({ ...disabled, enabled: true });
+assert.equal(blankRow.getAttribute('data-ccd-blank-session'), null, 'disabling releases the tag');
 // Disabling again releases every owned resource.
 configForms.published(disabled);
 assert.equal(attributes.has('data-dsh-ccd-style'), false);
@@ -262,6 +374,8 @@ assert.equal(modelSeats.size, 0);
 assert.equal(modelScopes, 0);
 assert.equal(headerViews.size, 0);
 assert.equal(headerScopes, 0);
+assert.equal(blankPetSeats.size, 0);
+assert.equal(petScopes, 0);
 assert.equal(rowConfigPages.size, 1);
 assert.equal(settingsScopes, 1);
 configForms.published({ ...disabled, enabled: true });
@@ -280,6 +394,8 @@ assert.ok(observersOpened > 0, 'the compat layer must observe the host DOM');
 assert.equal(observersClosed, observersOpened);
 assert.ok(listenersOpened > 0, 'the compat layer must own its window listeners');
 assert.equal(listenersClosed, listenersOpened);
+assert.ok(documentListenersOpened > 0, 'the compat layer must own its document listeners');
+assert.equal(documentListenersClosed, documentListenersOpened);
 const host = await import(pathToFileURL(join(root, 'lib/index.js')).href);
 assert.equal(typeof host.apply, 'function');
 assert.ok(host.Config);

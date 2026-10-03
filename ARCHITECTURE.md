@@ -1,8 +1,8 @@
 # 项目架构
 
-更新日期：2026-10-02。本文件描述当前架构；各模块现状见 [实施状态](docs/IMPLEMENTATION.md)，验证状态见 [验证记录](docs/VERIFICATION.md)。
+更新日期：2026-10-03。本文件描述当前架构；各模块现状见 [实施状态](docs/IMPLEMENTATION.md)，验证状态见 [验证记录](docs/VERIFICATION.md)。
 
-插件消费 DSH 的配置、服务与界面插槽，输出可撤销的样式与展示组件。Workspace、Session、消息、输入编辑器与执行状态由 DSH 持有；本项目只拥有启用状态、设计变量、样式表、展示组件及其资源。模型与 effort 的展示控件共享官方 ModelDirectory，不拥有独立选择状态；顶栏尾侧新增的两个入口只转发官方右侧栏的页签动作，不持有面板布局；深浅两色（以及 `system`）同样由宿主的主题偏好驱动，插件只按当前配色下发对应的一套变量，不持有主题状态。五个界面 feature（shell、sidebar、new-session、conversation、statistics）已是 `implemented`；tool-calls 保留原生交互。DSH 没有跨会话的用量聚合接口，所以 statistics 的数据由 Host 半自己折叠：它注册一个会话投影单元（纯函数折叠每条会话日志），把跨会话聚合挂在 Host 已鉴权的 fetch 通道上，浏览器半只读一个 JSON。聚合状态只有一份（投影 seam 的水位缓存＋durable 检查点），插件不持有第二份会话或用量状态。
+插件消费 DSH 的配置、服务与界面插槽，输出可撤销的样式与展示组件。Workspace、Session、消息、输入编辑器与执行状态由 DSH 持有；本项目只拥有启用状态、设计变量、样式表、展示组件及其资源。模型与 effort 的展示控件共享官方 ModelDirectory，不拥有独立选择状态；顶栏尾侧新增的两个入口只转发官方右侧栏的页签动作，不持有面板布局；深浅两色（以及 `system`）同样由宿主的主题偏好驱动，插件只按当前配色下发对应的一套变量，不持有主题状态。输入框小鲸鱼是只出现在新会话页、不接受指针事件的装饰（点击没有任何反应），不读会话、不发消息、不碰草稿、不镜像状态，组件自身也不持有状态。侧栏的新会话条目只读宿主自己的 `blank` 字段：DSH 点「新会话」即建会话，插件把仍是 blank 的那一行挡在列表外，第一次消息落盘、宿主清掉 `blank` 后条目自己出现——插件不建会话、不写会话状态，隐藏与否完全跟着宿主的字段走。六个界面 feature（shell、sidebar、new-session、conversation、composer-pet、statistics）已是 `implemented`；tool-calls 保留原生交互。DSH 没有跨会话的用量聚合接口，所以 statistics 的数据由 Host 半自己折叠：它注册一个会话投影单元（纯函数折叠每条会话日志），把跨会话聚合挂在 Host 已鉴权的 fetch 通道上，浏览器半只读一个 JSON。聚合状态只有一份（投影 seam 的水位缓存＋durable 检查点），插件不持有第二份会话或用量状态。
 
 ```mermaid
 flowchart LR
@@ -30,7 +30,7 @@ flowchart LR
 | `src/client/core` | 通用清理和 feature 装配流程 | contracts、shared、core |
 | `src/client/compat` | 固定版本的服务接入、DOM 端口、宿主类名、动态几何与展示适配 | contracts、shared、compat |
 | `src/client/theme` | 设计变量、语义 token 覆盖、两个 feature 共用的 Composer 几何 | contracts、shared、core、theme |
-| `src/client/features/*` | shell、sidebar、new-session、conversation、tool-calls、statistics | 本模块、公共契约／核心／兼容／主题；不能导入兄弟模块；model-controls 为新建／聊天页共用的模型插槽展示，conversation/header-actions 为顶栏尾侧的两个右侧栏入口，settings 为插件自己的配置页（不是 FeatureDefinition，随插件存活而非随启用状态） |
+| `src/client/features/*` | shell、sidebar、new-session、conversation、tool-calls、statistics、composer-pet | 本模块、公共契约／核心／兼容／主题；不能导入兄弟模块；model-controls 为新建／聊天页共用的模型插槽展示，conversation/header-actions 为顶栏尾侧的两个右侧栏入口，composer-pet 为输入卡浮层座位上的展示宠物，settings 为插件自己的配置页（不是 FeatureDefinition，随插件存活而非随启用状态） |
 | `src/client/apply.ts` | 唯一的多模块运行组合点 | 上述客户端模块 |
 | `scripts` | 构建、架构检查、安装包检查与本地验证工具；`scripts/lib/` 是共享源码 | 开发依赖、Node IO |
 | `tests` | 资源恢复与失败隔离的行为验证 | 内部模块，不扩大公共导出 |
@@ -41,7 +41,7 @@ flowchart LR
 
 1. Host `Config` 声明的字段标记 `.volatile()`：DSH 设置层只把 volatile 路径投影成配置表单，浏览器半通过 `ctx.configForms.get(entryId)` 读取同一份数据。
 2. 客户端加载器创建的条目不带配置，因此 `apply(ctx)` 不再接受第二个配置参数；它订阅 `ui-skin-ccd-style` 片段，配置变化时先释放旧作用域再按新配置挂载。相同配置的重复发布会被签名比较跳过。
-3. `enabled` 默认为 false。启用时先挂载主题层（根属性、深浅两套设计变量、共用 Composer 几何、语义 token 覆盖），再按 feature 顺序挂载各自的样式与观察器。
+3. 安装 bundle 设置 `enabled: true`，首次加载自动开启风格；用户层已保存的关闭状态仍优先。Host schema 和客户端配置缺失时的兜底仍是 false，配置表单未就绪时不挂载。启用时先挂载主题层（根属性、深浅两套设计变量、共用 Composer 几何、语义 token 覆盖），再按 feature 顺序挂载各自的样式与观察器。
 4. `mountFeatures()` 只执行已实现且配置启用的模块，为每个模块创建独立 CleanupScope。`planned` 只在 debug 下记录状态。
 5. 单个模块挂载失败时回滚已取得的资源，记录错误并继续其他模块；总启用失败时释放全部资源。
 6. 停用／配置变化／Cordis effect 释放后，以逆序释放资源，每个 disposer 只执行一次。共享启用标记按同一模块实例内的租约计数管理。
@@ -52,9 +52,9 @@ flowchart LR
 
 **架构约束：业务状态只有一个来源——DSH。** 插件不写 Session 日志，也不建立第二套项目／会话状态。统计卡片的聚合是**派生读模型**：它由 Host 投影 seam 驱动（框架持有水位缓存与 durable 检查点），插件只提供纯折叠函数与一个只读路由，不落自己的快照文件。React 读取可变数据应使用 SDK 注入的标准 hooks；组件不能手工订阅或镜像宿主数据。
 
-**架构约束：资源必须可逆。** 注册返回值、监听器、样式、观察器、异步取消都通过 `scope.add()` 管理。改变原有内联样式或属性时必须记录并恢复：目前只有根属性 `data-dsh-ccd-style`、打开中的菜单上的 `data-ccd-account-menu` 标记与 `--ccd-account-name`（两者都只在菜单打开期间存在，关闭或释放时移除）、被翻转到锚点上方的菜单的 `data-ccd-menu-flipped` 标记与同一模块为它写入的内联 `max-height`（关闭或释放时恢复菜单自己的值），Composer 上的 `--ccd-trailing-width`／`--ccd-model-max-width`、统计按钮上的 `--ccd-stat-value`，打开方式控件上的 `data-ccd-open-mode` 与热区 `title`／`aria-label`、被覆盖主键的 `aria-hidden`／`tabindex`（释放时逐条按原值恢复），新会话默认提示语的现有 Text 节点与对应输入区 aria-label（仅在仍等于本插件写入的值时恢复），视图切换器轨道上的 `--ccd-view-x`／`--ccd-view-w`／`--ccd-view-duration`，以及正文滚动视口上的 `data-ccd-fade-top`／`data-ccd-fade-bottom` 与页面主体上的 `--ccd-fade-bottom-inset`。DOM 不存在时保留原生 UI（样式表本身是惰性的，可以先行挂载）。
+**架构约束：资源必须可逆。** 注册返回值、监听器、样式、观察器、异步取消都通过 `scope.add()` 管理。改变原有内联样式或属性时必须记录并恢复：目前只有根属性 `data-dsh-ccd-style`、打开中的菜单上的 `data-ccd-account-menu` 标记与 `--ccd-account-name`（两者都只在菜单打开期间存在，关闭或释放时移除）、被翻转到锚点上方的菜单的 `data-ccd-menu-flipped` 标记与同一模块为它写入的内联 `max-height`（关闭或释放时恢复菜单自己的值），Composer 上的 `--ccd-trailing-width`／`--ccd-model-max-width`、统计按钮上的 `--ccd-stat-value`，打开方式控件上的 `data-ccd-open-mode` 与热区 `title`／`aria-label`、被覆盖主键的 `aria-hidden`／`tabindex`（释放时逐条按原值恢复），新会话默认提示语的现有 Text 节点与对应输入区 aria-label（仅在仍等于本插件写入的值时恢复），视图切换器轨道上的 `--ccd-view-x`／`--ccd-view-w`／`--ccd-view-duration`，宿主会话行上的 `data-ccd-blank-session`（会话不再 blank 或作用域释放时移除），以及正文滚动视口上的 `data-ccd-fade-top`／`data-ccd-fade-bottom` 与页面主体上的 `--ccd-fade-bottom-inset`。DOM 不存在时保留原生 UI（样式表本身是惰性的，可以先行挂载）。
 
-**架构约束：不夺取宿主的所有权。** `sidebar`、`main.conversation` 等位置由官方组件独占并声明其子插槽；替换它们会让官方子位置一并消失。因此当前实现不替换 Composer、侧栏或会话壳，也不改写框架列宽。只在无子插槽的 `conversation.input.model` 位置以 priority -10 注册模型／effort 展示组件，在 `conversation.session.header.utilities` 里追加两个右侧栏入口（原生"打开方式""更多"与日程条目保持原位），并在 `compat/open-target.ts` 里只改宿主"打开方式"控件的热区与标注、不替换它渲染的菜单；原生条目始终留在注册表，释放注册后自动恢复。
+**架构约束：不夺取宿主的所有权。** `sidebar`、`main.conversation` 等位置由官方组件独占并声明其子插槽；替换它们会让官方子位置一并消失。因此当前实现不替换 Composer、侧栏或会话壳，也不改写框架列宽。只在无子插槽的 `conversation.input.model` 位置以 priority -10 注册模型／effort 展示组件，在 `conversation.session.header.utilities` 里追加两个右侧栏入口（原生"打开方式""更多"与日程条目保持原位），并在 `compat/open-target.ts` 里只改宿主"打开方式"控件的热区与标注、不替换它渲染的菜单；原生条目始终留在注册表，释放注册后自动恢复。输入框小鲸鱼同样只追加一个浮层条目：它只出现在新会话页（宿主把那一页标成 `data-phase="hero"`），座位画在帧级 `shell.overlay`（宿主声明为可点穿的浮动层），位置由 `compat/pet-anchor.ts` 从真实卡片量出——量测只读，座位本身是插件自己的元素，会话页上根本没有可量的卡片，因此也就没有宠物。宠物同样随时让位：Composer 的工具行带 `container-type`、本身是个 stacking context，插件自己的 effort 弹窗（`position: fixed`）被夹在那一行里、低于帧级浮层，所以弹窗打开期间 `composer-pet/pet.css` 直接收起座位，关闭后回到同一角落——插件不写宿主的层序。
 
 ## 模型与 effort 的共用展示
 
@@ -72,13 +72,13 @@ DSH 用 CSS Modules，类名带构建哈希。所有宿主类名集中在 `src/c
 
 框架的三列宽度由 `ui-layout` 在 JavaScript 中求解并写成内联 `grid-template-columns`，样式表无法单独改写侧栏轨道。插件因此**不写任何轨道值**：侧栏宽度始终是 DSH 自己的偏好，分隔线画在侧栏自己的右边缘，拖动时线与指针同步移动（见 [DSH 兼容说明](docs/DSH_COMPATIBILITY.md)）。
 
-Composer 底部的两个位置需要读宿主动态结构：账号菜单的标记与名称镜像（`compat/account-menu.ts`），以及贴着窗口底边的菜单翻转（`compat/composer-menus.ts`；新建页芯片行的工作区选择器与 Agent 预设菜单同样从这个底边位置弹出，卡片高于锚点上方空间时才连同高度上限一起改，卡片离开固定的菜单表面时撤掉）。顶栏尾侧的「打开方式」还需要读第三个量：宿主那个分体按钮里是否渲染了应用菜单的入口（`compat/open-target.ts`）——渲染器只在存在可选应用时才生成 chevron，插件用这个事实决定显示通用打开字形还是整块隐藏，并把被覆盖半边的标注改成与点击行为一致。会话顶栏的视图切换器需要读第三个量：选中段相对轨道的偏移与宽度（`compat/view-switch.ts`），因为滑块要落在宿主自己的按钮上；框架 style 变化即时校正布局，选择变化才执行滑动动画。正文的上下边缘渐隐需要读第四个量：滚动视口两侧是否还有内容，以及常驻 Composer 盖住了视口底部多少（`compat/conversation-fade.ts`）——同一份观察把两个事实发布成属性与 `--ccd-fade-bottom-inset`，渐变层本身仍是样式表的伪元素。**这里不能用 `mask`**：Composer 是滚动视口的子元素（吸附在其中的座位），给视口加遮罩会把输入卡一起擦掉。统计簇偏移还读取原生 Composer trailing 组的实际宽度（`compat/stats-values.ts`），观察框架轨道 style 与模型收缩属性变化，确保拖动右栏时同步，并按控制行剩余空间发布模型按钮宽度上限以保留推理等级；速率与缓存命中的简短读数从宿主标签镜像（没有可算的计费用量时回退到用量总量），宽列显示、窄列省略，原生文本和详情按钮仍由宿主持有。新会话默认提示语通过 `compat/composer-placeholder.ts` 对固定版本已知 hero 文案做小范围展示适配，改现有 Text 节点及对应 aria-label，不替换编辑器、不改草稿；宿主工作区／阻断提示优先，释放时条件恢复。这些适配都只用 MutationObserver 观察（菜单翻转另加 `resize`；`ResizeObserver` 的投递同样依赖渲染步骤，被遮挡时不来，所以不用它做失效信号），仅在清理作用域内持有当前量测／修改节点，释放时清除引用并恢复全部标记、属性及仍属于本插件的文案。
+Composer 底部的两个位置需要读宿主动态结构：账号菜单的标记与名称镜像（`compat/account-menu.ts`），以及贴着窗口底边的菜单翻转（`compat/composer-menus.ts`；新建页芯片行的工作区选择器与 Agent 预设菜单同样从这个底边位置弹出，卡片高于锚点上方空间时才连同高度上限一起改，卡片离开固定的菜单表面时撤掉）。顶栏尾侧的「打开方式」还需要读第三个量：宿主那个分体按钮里是否渲染了应用菜单的入口（`compat/open-target.ts`）——渲染器只在存在可选应用时才生成 chevron，插件用这个事实决定显示通用打开字形还是整块隐藏，并把被覆盖半边的标注改成与点击行为一致。会话顶栏的视图切换器需要读第三个量：选中段相对轨道的偏移与宽度（`compat/view-switch.ts`），因为滑块要落在宿主自己的按钮上；框架 style 变化即时校正布局，选择变化才执行滑动动画。正文的上下边缘渐隐需要读第四个量：滚动视口两侧是否还有内容，以及常驻 Composer 盖住了视口底部多少（`compat/conversation-fade.ts`）——同一份观察把两个事实发布成属性与 `--ccd-fade-bottom-inset`，渐变层本身仍是样式表的伪元素。**这里不能用 `mask`**：Composer 是滚动视口的子元素（吸附在其中的座位），给视口加遮罩会把输入卡一起擦掉。统计簇偏移还读取原生 Composer trailing 组的实际宽度（`compat/stats-values.ts`），观察框架轨道 style 与模型收缩属性变化，确保拖动右栏时同步，并按控制行剩余空间发布模型按钮宽度上限以保留推理等级；速率与缓存命中的简短读数从宿主标签镜像（没有可算的计费用量时回退到用量总量），宽列显示、窄列省略，原生文本和详情按钮仍由宿主持有。新会话默认提示语通过 `compat/composer-placeholder.ts` 对固定版本已知 hero 文案做小范围展示适配，改现有 Text 节点及对应 aria-label，不替换编辑器、不改草稿；宿主工作区／阻断提示优先，释放时条件恢复。侧栏的临时新会话行读宿主自己的 `blank` 字段与行的 `data-row-key` 锚点（`compat/blank-session-rows.ts`）：只在宿主自己的行上打标记、按同一字段撤标记，列表模型与行内容都不动，会话服务缺失时不打标记、保留原生条目。这些适配都只用 MutationObserver 观察（菜单翻转另加 `resize`；`ResizeObserver` 的投递同样依赖渲染步骤，被遮挡时不来，所以不用它做失效信号——**唯一的例外是帧级宠物座位的量测**（`compat/pet-anchor.ts`）：那个座位由 JavaScript 定位、不像卡内座位那样能靠 CSS 跟着卡片走，`ResizeObserver` 只用来细化一个已经发布的位置，被遮挡时该座位本来就发布 null，因此在这里无害），仅在清理作用域内持有当前量测／修改节点，释放时清除引用并恢复全部标记、属性及仍属于本插件的文案。
 
 ## 构建与分发
 
 Host 构建为 ESM，运行依赖保持外置。Client 用 esbuild 打成单个 CommonJS factory，再包装为 `window.__ModuleLoader__.load({ id, factory(require) })`；React、Cordis 和 DSH 静态共享库从宿主模块表取得，不能打入私有副本。动态功能插件只能类型导入。
 
-CSS 按文本打进所属客户端模块，只有激活时挂载。声明文件由 TypeScript 生成；开发 watch 更新 JS/CSS，正式 build 更新声明。安装包仅包含根目录 `lib/`、`cordis.patch.yml`、README、LICENSE 和 package.json。MIT 许可证及采用的 DSH 图标／文案归属已在 LICENSE 中声明；`private: true` 仍阻止 npm 公开发布。
+CSS 按文本打进所属客户端模块，只有激活时挂载。声明文件由 TypeScript 生成；开发 watch 更新 JS/CSS，正式 build 更新声明。安装包仅包含根目录 `lib/`、`cordis.patch.yml`、README、LICENSE 和 package.json。MIT 许可证及采用的 DSH 图标／文案归属已在 LICENSE 中声明；包声明已移除 `private: true`、补齐公开元信息并固定发布源为 npm 官方 registry；尚未执行公开发布。发布前须等待并行修复完成并重验最终产物，见 [发布说明](docs/RELEASE.md)。
 
 `npm run check` 覆盖类型、模块边界、颜色归属、现有 Markdown 的本地链接、行为测试、构建和包内容。文档检查从根目录与 `docs/` 自动发现 Markdown，不依赖已删除的计划文件。运行工具与证据的边界见 [验证记录](docs/VERIFICATION.md)；清理本地文件时，profile 或备份引用的 tarball 必须保留。
 

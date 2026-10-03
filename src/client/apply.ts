@@ -14,6 +14,7 @@ import { mountFeatures } from './core/mount-features.ts';
 import { mountTheme } from './theme/mount.ts';
 import { mountModelControls } from './features/model-controls/mount.ts';
 import { mountHeaderActions } from './features/conversation/header-actions/mount.ts';
+import { mountComposerPet } from './features/composer-pet/mount.ts';
 import { mountSettingsPage } from './features/settings/mount.ts';
 import { shellFeature } from './features/shell/index.ts';
 import { sidebarFeature } from './features/sidebar/index.ts';
@@ -28,8 +29,16 @@ const FEATURES = [
   conversationFeature, toolCallsFeature, statisticsFeature,
 ] as const;
 
-/** Cordis services, not manifest package-name edges, control activation. */
-export const inject = ['slots', 'theme', 'uiWorkspace', 'configForms'];
+/**
+ * Cordis services, not manifest package-name edges, control activation.
+ *
+ * `sessions` is the Session Controller's catalog store: the sidebar column
+ * reads its `blank` flag to keep a provisional New Session row out of the list.
+ * It is a prerequisite of `uiWorkspace` already, and Cordis refuses to resolve
+ * a service that is not declared here, so the dependency is named rather than
+ * discovered at the point of use.
+ */
+export const inject = ['slots', 'theme', 'uiWorkspace', 'configForms', 'sessions'];
 
 /**
  * The only assembly point allowed to import multiple feature domains.
@@ -109,6 +118,12 @@ export function apply(ctx: Context): void {
         }
         if (next.features.conversation || next.features['new-session']) {
           mountModelControls(ctx, environment, scope);
+        }
+        /* The whale occupies the Composer's own overlay seats, so it is mounted
+           from here like the other slot registrations: the seat names span both
+           pages, and a feature module may not import a sibling. */
+        if (next.features['composer-pet']) {
+          mountComposerPet(ctx, environment, scope);
         }
         mountFeatures(FEATURES, environment, scope);
       } catch (error) {

@@ -1,6 +1,6 @@
 # 待办与已知边界
 
-更新日期：2026-10-02。这里只保留当前差异、尚未实现能力和未完成的工程验证；已解决问题的经过查 Git 历史。
+更新日期：2026-10-03。这里只保留当前差异、尚未实现能力和未完成的工程验证；已解决问题的经过查 Git 历史。
 
 ## 有意保留的差异
 
@@ -11,12 +11,14 @@
 - 顶栏保留原生对话／轨迹切换与团队入口；macOS 侧栏收起时省略会话标题，≤420px 聊天列同样省略标题（原生按钮、团队入口与两个新视图的开关规则见当前实现）。
 - 常驻统计只展示短读数，其余信息在原生详情面板；窄列省略速率与缓存命中数字。展示规则见 [当前实现](IMPLEMENTATION.md)。
 - 参考图表格里的行内代码芯片比本插件现有芯片窄约 10%（参考图约 12.3px 文字与 1px 3px 内边距，本插件沿用上一轮确认的 0.95em 与 `padding: 1px 4px`），示例表因此在 770px 列宽下多折一行。芯片是上一轮确认的元素，本轮表格改动没有动它；若要完全对齐参考图，需要单独确认芯片尺寸。
+- **新会话条目只是不显示，会话本身仍由 DSH 先建。** 点「新会话」时宿主已经建好 Session（并会在下一次点击时复用它），插件只把仍是 `blank` 的那一行挡在列表外；列表模型、会话标题与「新会话」按钮的行为都没变。因此如果某个工作区里只有这一条临时会话，工作区分组标题会留在列表里而下面没有行——宿主的分组渲染与成员数无关，隐藏分组标题需要另一次确认（那会同时拿掉该分组的「新建会话」入口）。
 
 ## 未实现能力
 
 - **statistics 剩余交互**：`Overview／Models`、`All／30d／7d`、热力图与柱状图悬浮提示都已实现（口径与参考算法见 [统计卡片调研](STATS_RESEARCH.md) 第十二节）；仍缺参考的骨架屏（它的 `hold` 变体：6 个 44px 占位格＋120px 图块＋一行 12×240 文案条）与点击下钻。聚合口径与通路见同一文档第十一节。
 - **statistics 的两处刻意偏离参考**：`Sessions` 按范围内**不同会话**计数（参考把每天的会话数相加，跨天会话会重复计入）；热力图与 `Peak hour` 不随范围变（这一条与参考一致，但参考的 `Peak hour` 语义容易被误读，改动前先看第十二节）。
 - **tool-calls**：当前保留原生展示与展开，高级概要、子调用分组和交互重构后置。
+- **小鲸鱼剩余姿态**：现在只有待机一种（点击反应按用户要求撤掉，工作姿态随会话座位一起删掉，见[验证记录](VERIFICATION.md)）。等待用户（抬头）与长时间空闲（闭眼趴下）需要真实信号——SDK 没有暴露待审批／待回答的会话状态，按 [宠物调研](PET_RESEARCH.md) 的约定不杜撰；要做时先在 SDK 里找到真实来源。另外鲸鱼固定在输入卡上沿一个位置，没有拖拽、换位或随会话记忆位置。
 - Windows／Linux、其他 DSH 版本适配。
 - 按模式各配一套背景色：当前自定义画布／侧栏只作用于浅色，深色固定用内置深色调色板（`BUILT_IN_DARK`）。要给深色也开放配置，需要新增成对的 YAML 字段，并决定深色派生色用哪套比例。
 - 更多可配色表面：卡片与代码块背景、文字与强调色、链接色（当前只有会话画布与侧栏两项可配）。
@@ -34,10 +36,12 @@
 - 真实跨模块 HMR 重叠时的资源清理；本地行为测试不代替运行场景。
 - 配置页在真实 Electron 窗口的复验：本轮只跑过隔离 Web profile（官方 Web 客户端 + 正式插件加载），Desktop profile 因沙箱只读未能安装。
 - 中文字体的实际观感验收：本轮字体栈已下发并断言，但没有逐档截图核对中英混排与标点字形。
+- 小鲸鱼在**真实 Electron 窗口**里的复验：新会话页上座位是否落在卡片顶边右角、进入一个已有消息的会话后是否整块消失（判据是宿主的 `data-phase`，只有真机才会走到；本地是在仿真外壳里用真锚点模块验证的），以及后台暂停与减少动态效果。原先的静态预览页已删除（见[验证记录](VERIFICATION.md)）。
 
 ## 升级与维护风险
 
 - DSH 宿主类名带构建哈希，升级时重新核对 `compat/host-dom.ts` 的来源、布局层级与版本。顶栏 `display: contents`、侧栏收起类和窗口控件让位都依赖固定版本结构。
+- 侧栏的新会话条目依赖两件宿主事实：`SessionSummary.blank`（来自宿主 summary、`sessionListMetadata` 投影与客户端 running 观察；第一次消息落盘或 agent 起跑时清掉）与工作区行的 `data-row-key="session:<id>"`（`ui-workspace` 的 `Rows.tsx`）。升级后核对这两处；`blank` 语义变了会表现为「条目永不出现」或「点了新会话仍立刻出现」，`data-row-key` 改名会让过滤器静默失效（`compat/blank-session-rows.ts` 与 `host-dom.ts` 的 `ANCHOR.sessionRows` 是唯一改动点）。
 - 空白会话页的角落座位依赖宿主 `.headerBlank .headerCorner { margin-left: auto }`（`ConversationRoot.module.css`）。插件把填满行的角落座位改成固定簇间隙，只对 `_headerBlank` 还原这条自动边距；升级后若规则改名或改语义，空白页的右侧栏入口会重新落回列首，核对点是空白页顶栏只剩角落座位一个控件时的落位。
 - 「打开方式」的覆盖式做法依赖 `OpenTargetButton` 的 `.iq4beG_split`／`.iq4beG_main`／`.iq4beG_chevron` 结构与"菜单入口在 chevron 上"这一事实。升级后若热区不再铺满整盒，会出现"字形点击直接打开"或"点了没反应"；核对点是该包的分体结构与 chevron 的渲染条件（`hasMenu`），改动只落在 `host-dom.ts` 与 `compat/open-target.ts`。
 - 右栏两个入口依赖跨插件面 `ctx.sidebarRight`／`ctx.sidebarRightTabs` 的成员名与语义（`openTab`／`focus`／`openTabs`／`get`／`subscribe`）。这些服务不是公开 SDK 类型，升级时按运行中的对象形状核对；成员缺失时当前实现是不渲染按钮。
@@ -46,9 +50,10 @@
 - 助手表格卡片依赖宿主表格的 computed style 事实（`border-collapse: collapse`、`13px/22px`、`th`／`td` 的 `padding: 10px 16px 10px 0`、`th` 下边框与列对齐）；这些规则来自构建期 CSS Modules，`document.styleSheets` 里取不到，升级后按运行中的 computed style 核对。
 - 尾侧簇的等距依赖宿主 trailing 组的两个结构事实：`.yhfFVG_activity` 空座位（`display: contents` 包装让宿主自己的 `:empty` 失效）与 `.yhfFVG_standardControls` 的分组；升级后核对 activity 是否仍以 `yhfFVG_activity`／`yhfFVG_activityExpanded` 区分空载与展开。
 - 深色依赖宿主主题服务的三件事：presenter 写 `body[data-ds-dark-theme]`、`getTheme()`／`setTheme()` 是偏好读写入口、`theme/change` 是变更信号。升级后核对这枚属性与成员名；属性改名会让插件深色块失效（内联的宿主 token 覆盖仍会按配色成对下发），成员缺失时配置页不显示主题行。
+- 小鲸鱼依赖四处宿主事实：`ConversationRoot` 根上的 `data-phase="hero"`（**这是宠物出场与否的唯一闸门**：`hero` 表示「还没有会话或会话没发过消息」，一开聊变 `active`，锚点就量不到卡片）、`shell.overlay` 这个帧级浮层仍然存在且可点穿、「卡片之前还有别的行就不出场」这条规则用到的四个类（`.ST7X_W_composerStack`、`.bocITq_root`、`.ST7X_W_heroWorkspaceRow`、`.yhfFVG_root`），以及排队消息气泡上的 `data-submission-echo`／`data-pending-steering`。升级后核对这四处；`compat/host-dom.ts` 的 `composerCardHero` 与 `features/composer-pet/pet.css` 的注释里记了来源。**`data-phase` 改名或语义变化后果最重**：鲸鱼要么回到每个对话里，要么再也不出现。问候块或芯片行改名时后果最轻（鲸鱼在卡片上方多占一行时会跟着收起），dock 行或那两个 echo 属性改名会让那一瞬间鲸鱼重新压上去。
 - 被遮挡窗口会节流动画帧；滑块数值和减少动态效果行为已有验证，平滑程度没有逐帧录屏证据。
 - 同路径 `file:` tarball 可能复用旧包；按 [安装指南](../install.md) 使用唯一路径，并保留 profile 或配置备份引用的 tarball。
 - `link:` 安装会重新解析被链接仓库依赖，可能清理其 `node_modules`；优先使用安装包。
-- npm 公开发布尚未执行，`private: true` 仍开启。
+- npm 公开发布尚未执行；包元信息与首次安装自动开启已准备，待并行修复完成后重验最终包、检查发布身份并发布。官方插件页按包名安装与市场收录仍待验收，见 [发布说明](RELEASE.md)。
 
 解决后移除对应条目，同步当前实现、架构与验证记录。

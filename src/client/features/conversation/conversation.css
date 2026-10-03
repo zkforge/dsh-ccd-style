@@ -342,6 +342,30 @@ html[data-dsh-ccd-style="true"] .icaHSq_scroll {
 }
 
 /*
+ * Jump-to-bottom control. The host parks it in the Composer's trailing corner —
+ * `toBottomSlot` is a zero-height flex row right-aligned with the content
+ * gutter, and the button is lifted off that line by its own negative margin
+ * (`@deepseek-ai/dsh-client-ui-chat`'s `ChatView.module.css`, pinned as
+ * `HOST.chatViewToBottomSlot`／`HOST.chatViewToBottom`) — which is the corner the
+ * Composer whale occupies, so the two marks sat on top of each other. The
+ * reference keeps the same affordance in the middle of the column and a step
+ * smaller; this moves the slot's alignment and resizes the button's box, and
+ * nothing else: the host keeps the button, its chevron, its label, its callback
+ * and its floating surface, and the negative margin follows the box so the gap
+ * above the Composer stays the host's own.
+ */
+html[data-dsh-ccd-style="true"] .icaHSq_toBottomSlot {
+  justify-content: center;
+  padding-right: 0;
+}
+
+html[data-dsh-ccd-style="true"] .icaHSq_toBottom {
+  width: var(--ccd-to-bottom-size);
+  height: var(--ccd-to-bottom-size);
+  margin-top: calc(-1 * var(--ccd-to-bottom-size));
+}
+
+/*
  * Transcript edge fade. The host's internal-request viewer softens the edges
  * of its scroll viewport with a 24px stencil and switches each side on only
  * while that side still holds content; the transcript itself has never had it.

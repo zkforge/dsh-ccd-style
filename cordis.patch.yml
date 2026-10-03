@@ -2,4 +2,4 @@
     - id: ui-skin-ccd-style
       name: dsh-ccd-style
       config:
-        enabled: false
+        enabled: true

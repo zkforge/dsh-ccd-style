@@ -14,7 +14,7 @@ dsh plugin --profile desktop add /absolute/path/dsh-ccd-style-0.1.0.tgz
 
 该命令把包写进 profile 的 `dependencies`，并在包声明了 `dsh.bundle.patch` 时把包名追加到 `dsh.profile.bundles`（`dsh-app-boot` 的 `reconcileProfilePlugins`）。bundle 层随后应用包内的 `cordis.patch.yml`，它用 `insert:` 形式插入条目 `ui-skin-ccd-style`。
 
-**只有 `insert:` 能新增条目。** 形如 `- id: X` / `name: Y` 的顶层条目是**覆盖**已存在条目；当 X 不在任何 bundle 层里时，加载器只打印 `patch: entry "X" not found` 并忽略，插件不会出现——这一点在本轮排查中实际发生过。用户层再用同一个 `- id: ui-skin-ccd-style` 覆盖 bundle 插入的条目来设置 `enabled`。
+**只有 `insert:` 能新增条目。** 形如 `- id: X` / `name: Y` 的顶层条目是**覆盖**已存在条目；当 X 不在任何 bundle 层里时，加载器只打印 `patch: entry "X" not found` 并忽略，插件不会出现——这一点在本轮排查中实际发生过。安装 bundle 设置 `enabled: true`，首次加载自动开启；用户层再用同一个 `- id: ui-skin-ccd-style` 覆盖 bundle 插入的条目来设置 `enabled`。用户层显式关闭仍优先，升级不写用户层配置。Host schema 和配置表单缺失的兜底保留 false，未取得配置时不激活。
 
 Client 产物调用 `window.__ModuleLoader__.load()`，factory 返回模块导出（`apply`、`inject`）。不能作为普通 ESM 入口加载。运行服务由导出的 Cordis `inject` 控制；`dsh.client.inject` 只是包名信息边。
 
@@ -84,6 +84,7 @@ DSH 不自动渲染 volatile 表单：`dsh-settings` 的 `autoGenerate` 目前�
 - 官方 Composer 的卡片、输入面板、工具行分别带 `data-composer-card`、`data-input-scroll`、`data-composer-input` 等稳定属性，是首选的样式锚点。
 - 未选工作区时 `InputBar.module.css` 的 `.yhfFVG_cardWorkspaceTrigger::after` 画整卡虚线（`border: 1px dashed; inset: 0`）；插件在作用域内设 `content: none`，改由该状态下的输入面板用 `border-style: dashed` 表达提示；选好工作区后自然回到实线。类名记录在 `compat/host-dom.ts`，来源为本机 DSH `0.2.0-rc.2` 的官方 InputBar；原生卡片点击、编辑器键盘入口与禁用状态保留。
 - 会话顶栏的视图切换器（`conversation.view` 列表插槽 → `[data-conversation-tabs]` 的 `role="tab"` 按钮）同样由官方注册与渲染：插件不注册条目、不接管选中状态，只重排它所在的顶栏并改画外壳（见下）。
+- 正文末尾的「回到底部」浮层控件由 `ui-chat` 自己的 `ChatView` 渲染（`ChatView.module.css` 的 `icaHSq_toBottomSlot`／`icaHSq_toBottom`，类钉在 `compat/host-dom.ts` 的 `HOST.chatViewToBottomSlot`／`HOST.chatViewToBottom`）：它只在读者离开正文末尾时出现，槽是零高度的右对齐行，按钮 34px 圆形并靠自身负边距顶到那一行上。插件只改槽的对齐（居中）与按钮盒（`--ccd-to-bottom-size`，22px），按钮本体、图标、`aria-label`、回调与浮层表面仍是宿主的，出现／消失完全跟随宿主状态。
 
 ## 模型选择服务（2026-10-02）
 
@@ -123,6 +124,8 @@ TSX 接收 `locked`、`available`、目录标准 hook 与注册层回调；不�
 ## 版本相关的 DOM 适配
 
 DSH 使用 CSS Modules，类名带构建哈希（例如侧栏 `_3WPZCG_`、会话 `ST7X_W_`、输入区 `yhfFVG_`、框架 `_6Qf49G_`）。这类选择器全部集中在 `src/client/compat/host-dom.ts`，逐条注明来源包与源文件。稳定锚点优先使用 `data-slot` 与 `data-*` 状态属性。
+
+**Composer 工具行是个 stacking context（2026-10-03）。** 安装包内 `.yhfFVG_row`（输入栏的工具行；npm 固定包里同一条规则体的前缀是 `uV2eYG_`）带 `container-type: inline-size`，size containment 隐含 layout containment，所以这一行会建立 stacking context。插件自己的 effort 弹窗（`.ccd-effort`，`position: fixed; z-index: 1000`）渲染在行内的 `conversation.input.model` 槽里，`z-index` 因此被夹在行内，低于帧级 `shell.overlay` 的 `_6Qf49G_overlayLayer`（`z-index: 20`、`pointer-events: none`）——输入框鲸鱼的座位正画在那个浮层里，于是鲸鱼会盖在打开的弹窗上（实测座位 `1118,717 32×24` 与弹窗 `937.5,667.4 220×111.6` 相交，落在 `Smarter` 一端）。插件不改宿主的层序，也不把弹窗 portal 出工具行（那会让 `.ccd-model-controls` 祖先链上的墨色守卫失效）：`features/composer-pet/pet.css` 在 `.ccd-effort` 存在期间让座位 `display: none`，弹窗关闭即恢复。
 
 助手正文 Markdown 样式限定在 `ui-chat/AssistantMarkdown.module.css` 的 `.gKv1-q_root` 内。官方静态共享库 `ui-primitives/markdown/MarkdownText.module.css` 在本机 Web／Desktop 共用的 web-frontend bundle 中映射为 `._markdown_1ypvv_5`，文件导航按钮为 `._fileMention_1ypvv_85`；类名登记在 `compat/host-dom.ts`，来源经只读 app.asar 和运行中的官方 Web 组件核对。`data-markdown-variant="compact"` 用于排除推理／工具的紧凑 Markdown；`:not(pre) > code` 仅调整行内代码，不影响代码块。宿主代码字号规则自带 `!important`，插件仅对该字号比例作同等优先级覆盖。长代码芯片使用 `inline-block` 与 `max-width: 100%` 在自身内部换行，避免 Chromium 对逐行克隆背景边框的额外宽度计算造成溢出。链接和代码中的路径按钮仍由原生 Markdown delegate 处理，原生链接图标与焦点环保留；没有新增导航或发送逻辑。
 

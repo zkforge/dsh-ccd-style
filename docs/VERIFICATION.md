@@ -2,6 +2,201 @@
 
 更新日期：2026-10-03。本文件保留当前验证结论与证据位置，源码检查、夹具和真实运行分开记录。已被后续修复取代的详细记录保存在 Git 提交 `ec55195` 中，可执行 `git show ec55195:docs/VERIFICATION.md` 查看。
 
+## 当前全部改动提交前检查（2026-10-03）
+
+用户要求一并提交当前工作区全部改动。提交前 `npm run check` 完整通过：类型、架构与文档链接、133 项测试、构建、70 文件的包检查；`git diff --check` 通过。本轮只复核本地检查，真实 CLI／Web 与 Desktop 验证范围仍以上述各项记录为准，未重新安装日常 profile，未发布 npm 包。生成目录、安装包与本地验收材料依照忽略规则保留。
+
+## npm 发布准备与首次安装自动开启（2026-10-03）
+
+**范围。** 用户要求先准备发布，另一个 agent 同时修 bug。本轮只改包声明、锁文件、安装 bundle、安装默认值测试与相关文档，不改运行时源码、不改日常 desktop profile、不公开发布。候选包来自当时共享工作区，正式发布前须等待其他修复完成并重验最终产物。
+
+**行为。** `cordis.patch.yml` 的安装条目设置 `enabled: true`，首次加载自动开启；Host schema 和未加载配置的客户端兜底保留 false。已有用户层 `enabled: false`、loader `disabled: true` 以及颜色、模块配置仍优先。包声明移除 `private: true`、补齐公开元信息并固定 npm 发布源。README 的 npm/官方页入口标为发布后可用，市场入口标为待收录。新增 `tests/install-default.test.ts` 用 YAML 读取实际 bundle，经 SDK reactive cells 的 `get()` 模拟设置传输后验证自动启用、默认模块与显式关闭配置。
+
+**本地检查。** `npm run pack:local --cache .cache/npm` 的 prepack 完整通过：类型、架构、文档链接、133 项测试、构建、包检查；70 文件，126.4 kB（450.6 kB 解包），无字体、源码、截图或开发资源。锁文件通过离线 `--package-lock-only --ignore-scripts` 更新，未重新安装共享工作区的 node_modules。候选包 `artifacts/install.release-prep.wQWae4/dsh-ccd-style-0.1.0.tgz`，SHA-256 `c46a90df41c70ec54b5623acc0783492a1a2c17c9980cd4824f746e9c0f25c16`。
+
+**真实 CLI 配置组合。** 使用本机 DSH `0.2.0-rc.2` 自带 CLI、新建隔离 `DSH_HOME=.cache/verify/home-install-default.In0wME` 的 Web profile。正式安装 tarball 后 dependencies/bundles 注册正确，`--dump-config` 的安装条目为 `enabled: true`；保存 `enabled: false`、canvas `#aabbcc`、sidebar feature false 后重装，用户 patch 逐字节未变且三项选择都保持；loader 的显式停用优先；正式 remove 后依赖与 bundle 均移除。脚本 `.verify/release-prep-install.mjs`，汇总证据 `output/playwright/release-prep/report.json`。pnpm 的 peers 检查提示 profile 层缺 Cordis peer；内置官方插件也声明同一 peer，实际 Cordis 由宿主提供，以下真实宿主启动与浏览器运行成功，不向插件打入私有副本。
+
+**真实 Web 运行。** 重新安装同一个候选包并清空用户覆盖，通过正式 `dsh web --no-open --port 19643` 启动，Playwright CLI 的独立 release-prep 浏览器访问官方客户端。首次页面自动出现根标记 `data-dsh-ccd-style=true`，12 张插件样式，配置页总开关为 checked；无需手工启用。点击总开关关闭后根标记移除，只剩配置页的 1 张样式；重载后仍关闭，配置页仍可访问；重新打开后恢复根标记与 12 张样式。浏览器 console errors 0。只跳过新 profile 的 API Key 提示，未配置密钥、未发送消息。浏览器和服务器已关闭，插件已从隔离 profile 移除；候选包与证据保留。
+
+**未完成的发布验收。** 真实 Electron 窗口、官方插件页按 npm 包名安装、npm 下载与市场收录尚未验证。本机 `npm whoami --registry=https://registry.npmjs.org/` 返回 `ENEEDAUTH`；用户须在正式发布前登录 npm。已准备不等于已发布，后续流程见 [发布说明](RELEASE.md)。
+
+## 鲸鱼不再遮住 effort 弹窗（2026-10-03）
+
+用户截图反馈：新会话页上点开 effort 弹窗后，输入卡右上角的像素鲸鱼压在弹窗右上角，盖住「Smarter」。
+
+**根因（安装包只读核对＋运行实测）。** effort 弹窗是 `.ccd-effort`（`position: fixed; z-index: 1000`），渲染在 `conversation.input.model` 槽里，也就是 Composer 的工具行。宿主给那一行写了 `container-type: inline-size`（安装包 `app.asar` 内 `.yhfFVG_row` 的规则体与 npm 固定包 `uV2eYG_row` 逐字相同，只有构建前缀不同）；size containment 隐含 layout containment，这一行因此是 stacking context，弹窗的 `z-index` 被夹在行内，低于帧级 `shell.overlay` 的 `_6Qf49G_overlayLayer`（`z-index: 20`）——鲸鱼的座位正画在那个浮层里。实测：座位 `1118,717 32×24`、弹窗 `937.5,667.4 220×111.6`，两者相交，鲸鱼落在 `Smarter` 一端，与用户截图同一处。
+
+**修法（一条让位规则，不动宿主层序）。** `features/composer-pet/pet.css` 增加 `html[data-dsh-ccd-style="true"]:has(.ccd-effort) .ccd-pet-blank-seat { display: none; }`：弹窗是一时的表面，鲸鱼是装饰，装饰让位，关闭弹窗时由 `:has()` 自动解除。没有改宿主的 `z-index`，也没有把弹窗 portal 出工具行——那会让 `.ccd-model-controls` 祖先链上的墨色守卫（见下面「模型名与 effort 的选值墨色」）失效。
+
+**本地检查。** 改动是纯 CSS，按同尺寸截图验收，没有新增重复断言。当前共享工作区的提交前完整 `npm run check` 已通过：类型、架构与颜色归属、文档链接、133 项测试、构建、70 文件的包检查；其中包含发布准备新增的安装默认值测试。
+
+**真实运行（隔离 Web profile）。** `.cache/verify/home-pet`（由 `home-web` 复制，`DSH_HOME` 指向它、`dsh web --no-open --port 19642`，DSH `0.2.0-rc.2`，插件经正式 CLI 从 `artifacts/install.pet-effort2/dsh-ccd-style-0.1.0.tgz` 安装，安装副本 `lib/client.js` 与工作区构建逐字节一致（SHA-256 `3228500782a6e5a60f676a95654ad3e6902c80138d19ab5fbb6cd409c0769067`）；Playwright Chromium 1280×820 @2x，脚本 `.verify/pet-effort-overlap.mjs`，**0 pageerror**）。同一页上做对照：注入一层可关闭的 `!important` 样式把座位强制显示＝改前，关掉＝改后，两半共享其余每一个像素。10 项判定全部 true：
+
+| 判定 | 实测 |
+| --- | --- |
+| 改前鲸鱼与弹窗相交 | 座位 `1118,717 32×24` × 弹窗 `937.5,667.4 220×111.6` 相交，座位落在弹窗右半边（`Smarter` 一端） |
+| 根因：座位所在浮层 | `_6Qf49G_overlayLayer`，`z-index: 20`、`pointer-events: none` |
+| 根因：弹窗被 containment 夹住 | 最近的容器祖先 `yhfFVG_row`，`container-type: inline-size` |
+| 改后让位 | 座位 `display: none`、盒归零 |
+| 弹窗不受影响 | 几何逐项与改前相同，拖动条值／等级名／`Faster`・`Smarter` 两端标签都在 |
+| 关窗恢复 | 座位回到 `1118,717 32×24`、`display: block`，与改前同一角落 |
+| 再开一次 | 仍然让位 |
+| 控制台 | 0 pageerror |
+
+证据：`output/playwright/pet-effort-final/`（`before-band.png`＝改前鲸鱼压住 `Smarter`、`after-band.png`＝改后弹窗完整，另有 `restored-band.png`、`closed-band.png`、两张整窗图与 `report.json`）；对照图 `docs/verification/local/pet-effort/compare-pet-effort.png`（同尺寸 2×，上=改前／下=改后）。
+
+**安装。** 用户选择立即生效：`artifacts/install.pet-effort2/dsh-ccd-style-0.1.0.tgz`（2026-10-03 16:00 打包，70 文件，就是本轮真实运行验证的那份构建）由正式 CLI 装入 desktop profile，配置备份 `.ccd-style-backup.AfkT5u/`；安装副本 `lib/client.js` 的 SHA-256 与工作区构建一致（`3228500782…`）、含本轮的让位规则，profile 的用户层配置与 `dshmarket` 等其他 bundles 未动。装的是本轮验证过的快照：另一个会话随后落的安装默认值（`cordis.patch.yml` 的 `enabled: true`）与发布准备不在这份构建里，也不影响既有的 profile 用户层。
+
+**尚未做真实 Electron 窗口验证。** 桌面端要 ⌘R（或重启）才会加载这份构建：核对新会话页上打开 effort 弹窗时鲸鱼不在、关掉弹窗后鲸鱼回到卡片右上角同一角落。
+
+## 「回到底部」控件移到中间并缩小（2026-10-03）
+
+用户反馈：正文末尾那个「跳到最下方消息」的箭头和输入框小鲸鱼挤在同一个角上；要求像 Claude 那样改到中间，仍是圆形但小一点。
+
+**宿主事实（只读核对安装包）。** 那个控件不是插件的，是 `@deepseek-ai/dsh-client-ui-chat` 的 `ChatView` 在读者离开正文末尾时渲染的 `toBottomSlot`／`toBottom`（`ChatView.module.css`，`0.2.0-rc.2`）：槽是零高度 flex 行、`justify-content: flex-end` 并带一段 `padding-right` 内容沟槽，按钮 34×34、`border-radius: 100px`、靠自己的 `margin-top: -34px` 顶到那一行上。输入卡右上角正好是鲸鱼座位，两者因此重叠——隔离运行实测改前按钮 `(1127.5, 691, 34×34)` 与鲸鱼 `(1117.5, 717, 32×24)` 相交。
+
+**实现（只改展示几何）。** `features/conversation/conversation.css` 把槽改成 `justify-content: center`、去掉 `padding-right`，按钮盒改成新 token `--ccd-to-bottom-size`（22px），负边距跟着盒走，所以「按钮下沿到输入卡上沿」这条宿主自己的 16px 间距逐像素不变。按钮本体、chevron、`aria-label`、回调与浮层表面都仍是宿主的；两个类名登记进 `compat/host-dom.ts`（`HOST.chatViewToBottomSlot`／`HOST.chatViewToBottom`）。尺寸依据是用户给的 Claude 参考图：同一个控件实测 40×44 设备像素 @2x（约 21px），宿主是 34px。
+
+**本地检查。** `npm run check` 全绿：类型、架构与颜色归属、131 项测试、构建、包内容 70 文件（比上一轮少 1 个声明文件，来自同工作区另一个会话正在进行的 composer-pet 重构，与本轮无关）。
+
+**真实运行（隔离 Web profile，两趟）。** `.cache/verify/home-arrow`（由 `home-web` 复制，`DSH_HOME` 指向它、`dsh web --no-open --port 19631`（第二趟 19632），DSH `0.2.0-rc.2`，插件经正式 CLI 从 `artifacts/install.toBottom/dsh-ccd-style-0.1.0.tgz` 安装；Playwright Chromium 1280×820 @2x，脚本 `.verify/to-bottom-placement.mjs`，两趟都是 **0 pageerror**）。隔离 profile 的会话都短于视口，所以用页内夹具把正文撑长，再用真实滚轮手势离开末尾让控件出现；样式表、状态机与按钮都是真实实现。改前的对照是把宿主的两条原值用一层可关闭的 `!important` 样式加回同一个页面，两半共享其余每一个像素。
+
+第一趟（15:06，构建 sha256 `6276c682…`，也就是用户截图时的那份代码，鲸鱼在场）11 项判定全部 true：
+
+| 判定 | 实测 |
+| --- | --- |
+| 22×22 圆形 | `22×22`、`border-radius: 100px` |
+| 水平居中 | 按钮中心 776.5 ＝ 正文列中心 ＝ 输入卡中心 776.5（滚动视口中心 779，差的 2.5px 是宿主自己的滚动条沟槽） |
+| 不再压住鲸鱼 | 改后按钮 `(765.5, 703, 22×22)` 与鲸鱼 `(1117.5, 717, 32×24)` 不相交；改前两者相交 |
+| 宿主间距不变 | 按钮下沿到输入卡上沿改前改后都是 16px |
+| 本体仍是宿主样式 | 背景 `rgb(255,255,255)`、阴影、圆角与 `aria-label`「回到底部」逐项与改前一致 |
+| 回调仍在 | 点按钮后正文回到最下方（scrollTop 525 ＝ range 525），控件自己消失 |
+
+第二趟（15:46，当时工作区的构建 sha256 `b4647adb…`，安装副本与该构建逐字节一致）复核产物：几何逐项与第一趟相同（按钮 `(765.5, 703, 22×22)`、按钮／正文列／输入卡中心同为 776.5、点击回到最下方、0 pageerror）；两项与鲸鱼相关的判定记为 `null` 而非通过——同工作区另一个会话正在重构 composer-pet，这份构建里卡片内鲸鱼座位暂时不渲染，脚本因此拒绝把「不相交」当成结论。
+
+对照图：`docs/verification/local/to-bottom/compare-to-bottom.png`（同尺寸 2×，上=改后／下=改前）与放大图 `button-zoom.png`；两趟的原始证据分别在 `output/playwright/to-bottom-placement/` 与 `output/playwright/to-bottom-placement-final/`（各含 `report.json` 与截图）。
+
+**尚未做真实 Electron 窗口验证。** 以上结论来自隔离 Web 客户端（与桌面同一套 bundle）。桌面端要等重启加载新构建后按同尺寸截图核对：正文往上滚时控件出现在正文列中间、比原来小一圈，鲸鱼独占卡片右上角。本轮结束时用户已在自己的窗口里看到该改动生效。
+
+## 新会话条目按第一次发送出现（2026-10-03）
+
+用户反馈：点「新会话」后左侧立刻多出一条「新会话」条目，不需要；只显示新会话页即可，真正输入并聊天时再出现条目。实现是**展示过滤**，不是延迟建会话：DSH 在点「新会话」时就已经建好 Session（并在下一次点击时复用它），宿主自己用 `blank` 字段表达「已创建、还没有内容」——`@deepseek-ai/dsh-api-session-controller` 的 `SessionSummary.blank` 文档写明「New Session reuses a blank one targeting the same workspace. Filtering stays with the consumer」，宿主浏览器只显示当前选中的那一条 blank。插件把**所有** blank 根会话挡在列表外，第一次消息落盘时宿主清掉 `blank`，条目自己出现。之所以不改成"点了先不建会话"：无会话的新建页在固定版本里是 inert Composer（`InputBar` 用 `sessionId !== void 0` 守卫草稿编辑器，卡片变成工作区选择触发器，占位文案 `hero.chooseWorkspace`），先不建会话就没法直接打字发送。
+
+**实现。** 新增 `src/client/compat/blank-session-rows.ts`：`blankSessionIds()` 从宿主会话列表快照里取 `blank === true` 且没有 `parentId` 的根会话（fork 落地前的临时 blank 不算新会话占位）；`mountBlankSessionRows()` 给宿主自己的 `[data-row-key^="session:"]` 行打 `data-ccd-blank-session`，由会话列表订阅与文档 childList 观察（先判断变更是否落在 `[data-slot="sidebar.workspaces"]` 内，聊天页流式输出不触发列表读取）驱动同步，释放时摘标记、退订、断开观察。`features/sidebar/sidebar.css` 只隐藏带标记的行。宿主事实经 `HostServices.blankSessions`（`compat/adapter.ts` 从 `ctx.sessions.list` 构造，成员缺失时为 null → 保留原生条目）交给 feature。**一处激活期修复**：Cordis 的上下文代理对未在 `inject` 里声明的服务会抛 `cannot get property "sessions" without inject`，所以 `apply.ts` 的 `inject` 补上 `sessions`（它本来就是 `uiWorkspace` 的前置）；补上之前隔离实例报 `dsh-ccd-style: failed`。
+
+**本地检查。** `npm run check` 全绿：类型、架构与颜色归属、130 项测试（本轮新增 10 项 `tests/blank-session-rows.test.ts`：行键解析、blank 根会话判定、fork 子会话豁免、标记双向跟随、观察器只对浏览器区域内的变更读列表、死节点不再跟踪、释放清标记与两条信号、数据源抛错只上报、订阅失败时把已开的观察器一并关掉），构建，包内容 72 文件。`scripts/check-package.mjs` 的打包夹具新增一段：顶层提供 `sessions`（含一条 `blank` 会话）、文档返回两条 `data-row-key` 行，开启 sidebar 后 blank 行被打标记、真实行不动、样式表 +2，关掉后标记被摘掉；夹具同时断言观察器开关配平。
+
+**真实运行（隔离 Web profile）。** `.cache/verify/home-web`（`dsh --profile web`，DSH `0.2.0-rc.2`，插件经正式 CLI 从 `artifacts/install.blank-rows3/dsh-ccd-style-0.1.0.tgz` 安装，Playwright Chromium 1382×875 @2x，脚本 `.verify/blank-session-row.mjs`，**0 pageerror**）。11 项判定全部 true：
+
+| 场景 | 结果 |
+| --- | --- |
+| 点「新会话」 | 会话页进入 `data-phase="hero"`；该行被打标记且 `display:none`（高 0），可见行数 5 → 5（不新增条目） |
+| 再点一次「新会话」 | 宿主复用同一条 blank 会话，隐藏行仍是同一条，可见行数仍 5 |
+| 去掉根属性（原生对照） | 同一条行恢复可见（高 32、原生行高），可见行数 5 → 6 —— 行仍在宿主列表里，插件只改展示 |
+| 在新建页发送第一条消息 | 宿主清掉 `blank`，标记消失、标题变成消息生成的标题，条目自己出现（该行由隐藏转可见） |
+| 发送后再点「新会话」 | 新建一条 blank 会话并同样隐藏（隐藏行 id 与上一条不同） |
+
+一条读法上的注意：宿主的浏览器自己会给每个分组截断行数并把多出来的放进 `overflow:` 行，所以"条目出现"这条判定看的是**那条临时行本身由隐藏转可见、且不再带标记**，不是总可见行数加一（分组满员时它会把另一行换进 overflow，原生行为，与本插件无关）。
+
+证据：`output/playwright/blank-session-row/` 的 `report.json` 与五张截图；并排对照在 `docs/verification/local/blank-session-row/compare-sidebar.png`（1 点新会话无条目／2 首次发送后出现／3 关掉插件的原生列表）。
+
+**安装。** `artifacts/install.blank-rows3/dsh-ccd-style-0.1.0.tgz`（2026-10-03 14:18，72 文件）由正式 CLI 装入 desktop profile：profile `dependencies` 指向该 tarball、`dsh.profile.bundles` 含 `dsh-ccd-style`，安装副本 `lib/client.js` 的 SHA-256 与工作区 `lib/client.js` 一致（`4988f807…`）；profile 配置备份在 `.ccd-style-backup.Dzgt9M/`。
+
+**尚未做真实 Electron 窗口验证。** 以上结论来自本地检查与隔离 Web 客户端；桌面端要等重启加载新构建后按同尺寸截图核对（重点：点「新会话」后侧栏不出现条目、发送后条目带生成标题出现、再点「新会话」不累积）。
+
+## 输入框小鲸鱼（2026-10-03）
+
+工作区里那只半成品鲸鱼（feature 没接线、`npm run typecheck` 在 `SlotPet.tsx` 上报 TS2339）由本轮接手完成：`composer-pet` 接进配置开关与 apply 装配点，补上两个颜色 token，两个座位都落到宿主的真实插槽上。
+
+**座位与几何。** 聊天页注册进卡片自己的 `conversation.input.overlay`（list／session）；新建页没有 Session，固定版本的 `InputBar` 用 `sessionId !== void 0` 守着那个槽（npm 固定包 `lib/client.js:17450` 与安装包里的同一处），所以那一页由帧级 `shell.overlay` 承担，位置来自 `compat/pet-anchor.ts` 对 `.ST7X_W_root[data-phase="hero"] [data-composer-card]` 的量测。锚点在卡片里发现 `[data-ccd-pet-session]` 时发布 null，因此一页只有一只鲸鱼。腹部基线落在卡片顶边这条几何不是猜的：宿主自己的锚点规则是 `.yhfFVG_overlayAnchor{height:0;position:absolute;inset:0 0 auto}`（安装包 `app.asar` 内读出），与 npm 固定包里同一条规则的规则体逐字一致（只有类名前缀不同），所以 `.ccd-pet-seat` 的 `bottom: 0` 正好是卡片顶边。
+
+**本地检查。** `npm run check` 全绿：类型、架构与颜色归属、116 项测试（新增 7 项）、构建、包内容 71 文件。新增的 `tests/composer-pet.test.ts` 覆盖状态映射、无障碍名随语言、锚点在卡片缺位／未布局／页面隐藏／已有会话座位四种情况下都不发布位置、卡片移动与替换后跟随、释放后观察器与窗口／文档监听全部关闭且不再发布，以及「量测盒 = 样式表画的盒」这条尺寸契约。`scripts/check-package.mjs` 的打包夹具新增一段：`composer-pet` 关闭时不注册任何座位；开启后两个座位各注册一次、会话键随插槽字符串下发、锚点观察文档、关闭后座位与作用域一起归零，且文档监听的开闭计数相等。
+
+**预览页视觉验收**（同尺寸 1374×871、2× 截图，证据在 `docs/verification/local/composer-pet/`）：实测卡片右缘 1204、顶边 792，鲸鱼盒 32×24 落在 `left = 1204 - 44 = 1160`、`top = 792 - 24 = 768`；浅色 `#4d6bfe`、深色 `#7b93ff`。`hero-light.png`／`chat-light.png`／`hero-dark.png` 三张对照，`poke.png` 是点击后 120ms 的状态（`data-ccd-pet-state` 读作 `poke`，720ms 后回到 `idle`），`plugin-off.png` 是关掉插件后的同一个角（没有鲸鱼）。
+
+这一轮同时修掉两个只有渲染才会暴露的问题：宠物规则原来用裸类名，被宿主侧通用的按钮规则（预览页的仿真宿主与真宿主同一写法）盖掉颜色，现在整表挂在 `html[data-dsh-ccd-style="true"]` 下；预览页原来把组件直接挂在锚点上，少了真机插槽渲染出的 `.ccd-pet-seat` 座位，鲸鱼落到了卡片左上，现在补出同一个座位再挂真组件。
+
+**第二轮：按用户截图反馈收三处（同一轮内完成）。** 用户指出眼睛应该在尾部（与官方鲸鱼一致）、当前鲸鱼太大（要按 Claude 参考窗口的比例）、以及**卡片上方有任务条或其他条目时干脆不显示**。
+
+- 眼睛回到尾部（`M17 11H19V12H20V14H18V13H17Z`，闭眼线同位），也就是最初那版画法的位置；头仍是左端钝头。
+- 尺寸从 64×48 收到 **32×24**（网格 1:1，Retina 上一格两个设备像素，仍是整设备像素对齐），量测常量、样式表三个盒子与 `Whale.tsx` 的 `width`／`height` 同步改小，`tests/composer-pet.test.ts` 里那条「量测盒 = 样式表画的盒」契约继续把关。参考窗口里 Claude 的角色约 28×21 CSS px，32×24 与之同量级。
+- 新增 `pet.css` 规则：`.ST7X_W_composerStack:has(> :not(.bocITq_root):not(.ST7X_W_heroWorkspaceRow):not(.yhfFVG_root) ~ .yhfFVG_root) .ccd-pet-seat { display: none }`。读作「卡片之前还有一个既不是问候块、也不是工作区芯片行、也不是卡片自己的子元素」——也就是宿主自己的 dock 条目（待办面板、排队消息）或别的插件放进来的行；挂在卡片**之后**的统计卡片不在判据里，不会误伤。三个类名都在 `compat/host-dom.ts` 登记过，并在安装包 `app.asar` 里逐个核对（`.bocITq_root`、`.ST7X_W_heroWorkspaceRow`、`.ST7X_W_composerStack`、`.yhfFVG_root`）。
+- 预览页实测：同一个角在聊天页与新建页都是 32×24 @ `1160,768`；插进一条模拟的「任务 1 进行中 · 7 待处理」dock 行后 `display` 变 `none`（`getBoundingClientRect` 归零），移除后恢复；证据 `dock-row-hidden.png`。三张对照图与 `plugin-off.png` 已按新尺寸重拍。
+
+**第三轮：点击动作改成喷水、排队消息不再被压（用户反馈，同一轮内完成）。**
+
+- 用户指出点击后的挤压／弹跳不对味，要经典鲸鱼喷水。状态从 `poke` 改名 `spout`：`Whale.tsx` 增加一组画在背上的喷口、水柱与三颗水滴（新 token `--ccd-pet-spray`，浅色 `#8fb4ff`、深色 `#a8c3ff`），平时 `opacity: 0`，点击时跑 700ms 的 `ccd-pet-spout`（六步 `steps()`：升起 → 散开 → 落回），身体不再变形、眼睛保持睁开；组件计时器同步改成 700ms。预览页实测点击后 `data-ccd-pet-state` 读作 `spout`、700ms 后回到 `idle`，峰值帧证据 `spout.png`。
+- 用户报告排队等待发送的消息仍被鲸鱼压住。查安装包确认：那条气泡不是 Composer 的 dock 行，而是正文末尾的回显用户气泡（`PendingSubmissionBubble` → `UserStyleBubble`，`data-submission-echo`；转向中是 `data-pending-steering`），所以上一条基于 Composer 栈结构的规则覆盖不到它。新增一条按这两个宿主属性判断的规则（卡片内座位与帧级座位都管），属性消失即恢复；预览页实测插入一条 `data-submission-echo` 气泡后 `display` 从 `block` 变 `none`，证据 `queued-echo-hidden.png`。
+
+**安装（第二轮之后）。** `artifacts/install.4Ordxe/dsh-ccd-style-0.1.0.tgz` 由正式 CLI 装入 desktop profile（配置备份 `.ccd-style-backup.6RC1fo/`），装的是**含另一个会话「临时新会话行」改动与 `apply.ts` 的 `sessions` 声明**的那一版；那次安装修掉了 `dsh-ccd-style: cannot get property "sessions" without inject`（见下）。第三轮的喷水与排队规则写在此之后，需要再装一次才进 profile。
+
+**第四轮：用户给参考动画，水花重做（同一轮内完成）。** 用户发来一只会喷水的像素鲸鱼 GIF（47 帧、约 3.9s，150×150、深色底）并说「看一下这个参考」——上一版那根细水柱「几乎看不出来，不好看」。
+
+- 逐帧拆参考动画：水花是**悬在头上的一团白云**，先冒头、长大成一片带尖刺的浪冠（峰值时宽约鲸身宽度的 55%），再炸成十几个分离的水滴、铺成一片弧形散开、最后消失；整段约 1.2s，鲸鱼本体一直在游动。据此把水花从「细柱＋圆盖」改成**六张整帧像素图**（冒头／长大／浪冠／炸开／散开／落回），全部锚在头顶（`x` 对称于 5.5，底边贴住背部），900ms 走完，`step-end` 关键帧让任一时刻只有一张在屏。
+- 颜色换成一对新的 azure（`--ccd-pet-spray` 浅色 `#2b96f0`／深色 `#74bcff`，浪尖的泡沫 `--ccd-pet-spray-light` `#6fbaff`／`#a9d4ff`）：上一版的 `#8fb4ff` 在白卡上太浅，是「看不出来」的主因。参考里的水花是纯白，白卡上无法用，所以取「比鲸鱼更亮的蓝」这条路，并保留泡沫色让浪冠不至于是块实心色。
+- 画布从 32×24 长到 **32×32**（上面 8 行是水花空域），`PET_HEADROOM` 与 `PET_BOX`、`Whale.tsx` 的 `viewBox`／`width`／`height`、`pet.css` 三个盒子同步改；鲸鱼本体的 24 行没动，腹部基线仍在卡片顶边。
+- 新增契约测试三条：图形网格 = 量测盒（`viewBox="0 -8 32 32"`）、六帧每一张都有对应的样式表动画且时长 = `SPOUT_MS`、六帧的可见区间首尾相接铺满 0–100%（既不重叠也不留缝）。连点会重放水花（`Whale` 用 `seq` 重挂载）。
+- 逐帧验收：把动画 `animation-delay` 设成负值并 `paused` 定格在 70/210/390/570/710/840ms 六个时刻截图（同尺寸、2×），实测六帧依次出现、时刻与关键帧一致，900ms 后 `data-ccd-pet-state` 回到 `idle`；当时的证据图 `splash-frames.png` 与旧的 `spout.png`（细柱版）都在第五轮随功能一起删除。
+- **预览页的变化：** 本轮进行期间，工作区里的 `showcase/` 静态预览页与 `scripts/build-showcase.mjs`（以及 `package.json` 的 `build:showcase`）被另一个会话从工作区移除了。为了不与其冲突，本轮改用 `/tmp` 下的最小仿真外壳截图：同一份插件样式表与真组件（`tokens.css`＋`pet.css`＋`ComposerPet`，esbuild 打包），宿主骨架只保留鲸鱼依赖的那几个类名与 `.yhfFVG_overlayAnchor{height:0;position:absolute;inset:0 0 auto}`。截图里的卡片外壳因此比真机简化，鲸鱼的位置、尺寸、颜色与六帧动画不受影响。
+
+**第五轮：用户决定撤掉点击反应（同一轮内完成）。** 第四轮的水花交付后用户回复「算了，一点都不好看，直接删了吧，点击没效果就行了」——三版点击反应（挤压／弹跳 → 像素水柱 → 参考动画的六帧水花）都不合意，最终**整个撤掉**，鲸鱼回到纯装饰。
+
+- 删除的范围：`Whale.tsx` 里的整组水花图形与 8 行空域（画布回到 32×24、`viewBox="0 0 32 24"`，鲸鱼本体的坐标一个没动）；`pet.css` 的六帧规则、六段关键帧、泡沫色与 `prefers-reduced-motion` 里的静态浪冠；组件里的点击处理、`spouting` 状态、`seq` 重挂载与 900ms 计时器；`PET_HEADROOM` 与 `--ccd-pet-spray`／`--ccd-pet-spray-light` 两个 token（`theme/tokens.css` 回到只有鲸鱼的两色）。
+- 同时收掉随点击一起存在的接线：`ComposerPet` 从 `<button>` 变成 `aria-hidden="true"` 的 `<span>`（没有动作的按钮对读屏是假承诺），座位与图形都不接指针事件，`compat/pet-labels.ts`（无障碍名）连同它的语言测试一起删除，插槽面从 `{ useRunning, label, sessionKey }` 收成 `{ useRunning }`，`BlankPetFace` 只剩 `useAnchor`。`petState()` 也回到两个状态。
+- **行为验收（仿真外壳，2×）**：座位与图形实测都是 32×24、`viewBox="0 0 32 24"`、`pointer-events: none`；鲸鱼中心点的 `elementFromPoint` 命中 `.ST7X_W_scrollBody`（即正文），说明那个角落的按下会像鲸鱼不存在一样落到下面，不会触发卡片的「未选工作区即点开选择器」；真实点击后 `data-ccd-pet-state` 仍是 `idle`、组件 DOM 逐字节未变、页面里 `[class*="spout"]` 节点数为 0。
+- 契约测试换掉三条喷水帧测试，新增一条「装饰契约」：组件必须 `aria-hidden`、不得出现 `onClick`／`onPointerDown`／`setTimeout`／`SPOUT`，图形与样式表里不得再出现 `ccd-pet-spout`，样式表不得出现 `pointer-events: auto`／`cursor: pointer`；`check:package` 的夹具改成断言宠物面**只有** `useRunning` 一个键（反应状态、计时器或文案再溜回来都会失败）。
+- 本地检查：`npm run check` 全绿——131 项测试（较上轮 −2）、架构与颜色归属、构建、包内容 71 文件（少了 `pet-labels` 的声明文件）。旧的两张水花证据图已删除，`docs/verification/local/composer-pet/` 回到座位、尺寸、收起行为那几张。
+
+**安装（第五轮）。** `artifacts/install.SIi9CH/dsh-ccd-style-0.1.0.tgz` 由正式 CLI 装入 desktop profile（配置备份 `.ccd-style-backup.5BtC56/`），装的就是撤掉反应后的这一版：安装副本与仓库构建逐字节一致（`lib/client.js` sha256 `6276c682…`），安装包里 `ccd-pet-spout` 与 `pet-spray` 的命中数都是 0，`inject` 仍是 `["slots", "theme", "uiWorkspace", "configForms", "sessions"]`。第三、四轮那两次安装（`artifacts/install.MPSD9V/`、`artifacts/install.bDc2vk/`）保留未删。
+
+**第六轮：宠物改成只在新会话页出现（用户纠正，同一轮内完成）。** 用户说「claude 的机制是只有新会话会展示宠物，一旦开始聊天，宠物就会消失」——此前插件是反的：聊天页用卡片内座位（`conversation.input.overlay`）显示鲸鱼，新会话页用帧级座位，一页一只但**每个对话里都有**。
+
+- 先把宿主的判据读出来（npm 固定包 `@deepseek-ai/dsh-client-ui-conversation/lib/client.js`）：`const hero = sessionId === void 0 || shellPhase === "blank" && (openState === "open" || summaryBlank === true); const phase = settling ? "settling" : hero ? "hero" : "active"`。也就是 `data-phase="hero"` = 「还没有会话，或会话一条消息都没发过」，第一条消息落盘即变 `active`。锚点的选择器本来就是 `.ST7X_W_root[data-phase="hero"] [data-composer-card]`，所以**只要删掉卡片内那个座位，闸门就已经成立**——不需要新增判据，也不会自己发明"什么算新会话"。
+- 删掉卡片内座位：`SlotPet.tsx`、`mount.ts` 里对 `conversation.input.overlay` 的注册、`DSH_SLOTS.composerOverlay` 这个名字，以及随之而来的会话读取（`sessions` 注入、`sessionRunning`、`useRunning` 面）。`SlotPet.tsx` 改名 `BlankPet.tsx`，只留帧级座位；`mountComposerPet` 的注入从 `['slots', 'sessions']` 收成 `['slots']`。
+- 于是 `state.ts`（`petState`／`sessionRunning`）与"工作中"姿态成了死代码：新会话页没有会话可读，永远只有待机。整块删掉，连同 `data-ccd-pet-state` 属性、`ccd-pet-swim` 关键帧与 `.ccd-composer-pet[data-ccd-pet-state="working"]` 两条规则；`ComposerPet` 不再接 props，组件里唯一的 state 是"页面是否隐藏"。锚点里"卡片已带会话座位就发布 null"的守卫也一并删除（那个座位不存在了）。
+- 两条收起规则改挂在文档根上：座位现在画在帧级浮层里、**不是** `.ST7X_W_composerStack` 的后代，原来的后代选择器永远匹配不到（实测确实是 `display: block`）。改成 `html[...]:has(.ST7X_W_composerStack > :not(...) ~ .yhfFVG_root) .ccd-pet-blank-seat`，与排队气泡那条同一写法。
+- **行为验收（仿真外壳，2×；锚点用的是仓库里的真模块，宿主 DOM 用真类名与 `data-composer-card`）**：`data-phase="hero"` 时座位存在且落在卡片顶边右角（实测 `left 792 / top 489`、32×24）；把根节点改成 `data-phase="active"`（即一个正常对话）后座位**消失**，切回 `hero` 又回来；卡片上方插一行 → `display: none`；插入 `data-submission-echo` 气泡 → `display: none`。截图证据：`hero-light.png`、`hero-dark.png`（新会话页有宠物）、`chat-no-whale.png`（普通对话页没有）、`dock-row-hidden.png`、`queued-echo-hidden.png`，以及把它们拼成一行的 `states.png`；旧的 `chat-light.png`（鲸鱼在对话页）已删除。
+- 契约测试：删掉状态映射两条，新增两条闸门契约——锚点选择器必须含 `[data-phase="hero"]`；`mount.ts` 的代码（去掉注释后）不得出现 `input.overlay`／`composerOverlay`／`SlotPet`、必须注册 `shell.overlay` 且受 `features['new-session']` 管，`DSH_SLOTS` 里不再有那个名字。`check:package` 夹具改成"只有一个帧级座位"，宠物面只剩 `useAnchor` 一个键。
+- 本地检查：`npm run check` 全绿——131 项测试、架构与颜色归属、构建、包内容 70 文件。
+
+**安装（第六轮）。** `artifacts/install.K7ITth/dsh-ccd-style-0.1.0.tgz` 由正式 CLI 装入 desktop profile（配置备份 `.ccd-style-backup.ExWELo/`），安装副本与仓库构建逐字节一致（`lib/client.js` sha256 `a7db644b…`）。安装包里 `ccd-pet-seat` 与 `ccd-pet-spout` 的命中数都是 0、`ccd-pet-blank-seat` 2 处，`conversation.input.overlay` 只剩 `mount.ts` 注释里那一句「为什么没有卡片内座位」；`inject` 仍是 `["slots", "theme", "uiWorkspace", "configForms", "sessions"]`（宠物自己只用 `slots`，其余是别的 feature 的）。
+
+**一次激活期故障（并发改动，已修）。** 工作区里另一个会话在 `compat/adapter.ts` 里从 `ctx.sessions` 构造端口，但当时 `apply.ts` 的 `inject` 没声明 `sessions`：Cordis 的上下文代理对未声明的服务直接抛错（`cannot get property "sessions" without inject`），而这次读取发生在 `createHostServices`（在挂载的 try/catch 之外），于是整个条目失效、界面回到原生。修法是 `inject` 补上 `sessions`（`uiWorkspace` 本来就需要它）。为了这类错误不再以「整个插件消失」的形式出现，`scripts/check-package.mjs` 的夹具改成按 Cordis 的契约解析服务：根上下文只提供 `inject` 里声明过的服务，读到未声明的服务直接让 `check:package` 失败。把 `sessions` 从声明里去掉做过变异验证：夹具报 `the plugin reads ctx.sessions but does not declare it in inject`。
+
+**尚未做真实 DSH 运行验证。** 桌面应用当时正在运行但没有开调试端口（`127.0.0.1:9222` 无 CDP 目标），本轮没有重启它，所以以上结论来自本地检查、固定版本宿主源码只读核对与仿真外壳（2×，锚点用真模块）截图。需要用户 ⌘R 后核对三件事：**新会话页上鲸鱼是否落在卡片顶边右角**；**给一个新会话发出第一条消息后鲸鱼是否整块消失**（判据是宿主的 `data-phase`，仿真外壳只重放了属性切换，真机才是完整路径）；以及新会话页上卡片上方多一行或出现排队气泡时是否收起。顺带确认点击鲸鱼所在的角落时界面没有任何变化、也不会误开工作区选择器。
+
+## 侧栏按参考图收敛（2026-10-03）
+
+用户给出一张左右并排的截图：左侧是 CCD 参考窗口，右侧是本插件的 DSH 侧栏（截到侧栏右缘的 1px 分隔线，右侧被压在另一个窗口的阴影下）。两窗口在同一张图里、比例相同，用插件自己已知的三个值反推比例——开关 `left:88px` + `28px` 盒 → 图标中心 102px、侧栏内边距 10px、导航行高 30px——三者都落在 2 截图像素／逻辑像素上，因此所有实测值（截图像素 ÷ 2）都与插件的 CSS 数字直接可比。左窗口左边被裁掉约 2px、右缘被遮挡，绝对值有 ±1~2px 误差，行高、行距、字号这类间隔量不受影响。
+
+实测对照（逻辑 px）：
+
+| 部位 | 参考 | 改前 | 改后 |
+| --- | --- | --- | --- |
+| 导航行高／行间距 | 26／0.5 | 30／2 | 26／1 |
+| 导航行圆角 | ≈8 | 10 | 8 |
+| 三行块总高 | 79 | 94 | 80 |
+| 非当前行墨色 | `#4a4a47` | `#1f1f1d` | `--ccd-text-nav` |
+| 当前行底色 | `#eeeeec` | 与悬停同为 `#f0f0ee` | `--ccd-selected`（悬停仍 `#f0f0ee`） |
+| 三颗导航图标 | 13／15／13 | 13／15／13 | 13／13／11（面板行统一 14px 盒） |
+| 项目行高／标签左缘 | 34~35／14 | 30／40.5 | 34／14 |
+| 项目行悬停 | 无灰底 | `--ccd-selected` 灰底 | 无灰底，标签升到 `--ccd-text` |
+| 项目行行尾 | 常驻「＋」 | 悬停才出现 | 常驻「＋」与「…」 |
+| 折叠箭头 | 1px 线条 `>` | 实心三角 | 线条箭头（`--ccd-icon-chevron-right`，宿主 `IconChevronRightOutlineArtwork` 几何） |
+| 会话行前导标记 | 5.5px 浅色圆点 | 14px 活动环（12px 实墨） | 8px 环（6px 实墨） |
+| 会话行标签左缘 | 38 | 38.5 | 38.5（16px 槽不变） |
+| 标题行 | 无标题、无这排按钮 | 「工作区」+ 三颗图标 | 去标题，三颗图标（加号／竖排滑块／搜索） |
+
+两处从截图里读出来、值得记下的事实：**新会话行那块灰底是悬停态**，不是「当前页」标记——宿主的 `.newSession` 只有 `:hover`，没有 active 类，所以「当前行底色」这条落在宿主自己会标记的 `panelActive` 面板行上；**会话行前导那颗不是静态圆点**，是 `data-state="ongoing"` 的活动环（`.spinner`，14px 盒、24 viewBox 里 r=9.5 的两个圆），缩到 8px 后实墨约 6px；静态状态点 `.dot` 是 10px 槽 + `::after` inset 20% 的 6px 实心核心，本来就与参考同量级，未改。
+
+**用户发现的一个回归（同一轮内修掉）**：「…」按钮原本按参考只做常驻的「＋」，把溢出触发留在悬停里；结果是点开菜单、指针移向弹层时行失去悬停 → 触发按钮被 `display:none` 摘掉 → 宿主「指针已离开触发器」立即关掉菜单（`Menu` 的 `closeOnPointerLeave` 只在触发器和列表**都在**时才靠 grace 撑过间隙）。两处收尾：项目行不再铺灰底（悬停改为标签升到 `--ccd-text`，只有宿主自己的「菜单已打开」锚点底色保留），行尾两个按钮都常驻。宿主源码只读核对见 `ui-primitives` 的 `Menu` 文档注释与 `ui-workspace` 的 `ProjectRowItem` 结构。
+
+实现落在 `src/client/features/sidebar/sidebar.css`，新增三个 token（`--ccd-text-nav` 深浅各一、`--ccd-icon-plus`、`--ccd-icon-chevron-right`，两个图形取自 DSH 的 `IconPlusOutlineArtwork`／`IconChevronRightOutlineArtwork`，MIT）；`--ccd-nav-row-height` 与 `--ccd-nav-gap` 随之改为 26px／1px。项目行的「文字在前、箭头在后、行尾按钮贴右」用 flex `order` 完成，没有改宿主 DOM；箭头的线条化是把宿主自己的线条箭头画回它的标记槽（宿主 `arrowOpen` 仍驱动那一次旋转，`prefers-reduced-motion` 下不转），视图选项的竖排滑块是把宿主自己的图形旋转 90°，都没有重画。项目行的 4px 内边距保留 `--dsh-workspace-indent`，分组视图的层级不丢。
+
+本地检查：`npm run check` 全绿（typecheck／架构与颜色归属／109 项测试／构建／包内容 64 文件）。安装：正式 CLI 将 `artifacts/install.6I2w1y/dsh-ccd-style-0.1.0.tgz`（2026-10-03 13:22，含灰底、箭头与常驻三处收尾改动）装入 desktop profile，安装副本 `lib/client.js` 已确认含新增规则、且不再含「悬停才显示行尾按钮」那条规则；profile 配置备份在 `.ccd-style-backup.fbrDId/`。
+
+**尚未做真实 DSH 运行验证**：以上结论来自本地检查、宿主 `0.2.0-rc.2` 的 DOM/CSS/JSX 只读核对与截图实测，没有在运行中的 Electron 里复验渲染结果，需要用户 ⌘R 后按同尺寸截图对照（尤其是图标尺寸、箭头位置与行尾加号三项）。
+
 ## 统计卡片：悬浮提示、Models 视图与范围切换（2026-10-03）
 
 在已接入的真实数据通路之上补齐参考卡片剩下的三个交互。参考实现从 Claude Desktop bundle 逐段核出（`cc70f2bdf-oAbIMYEh.js`），几何用两张 @2x 截图实测，两者都记在 [统计卡片调研](STATS_RESEARCH.md) 第十二节。
@@ -575,14 +770,26 @@ Web profile 默认停用 `ui-sidebar-browser`（`dsh-web-app` 补丁里 `disable
 
 当前开发构建可由 `npm run build` 重建。重装须使用新的 tarball 路径，不能覆盖 profile 或备份仍引用的安装包；升级与回退见 [安装指南](../install.md)。
 
-## 预览页（2026-10-03，仅本地）
+## 预览页已移除（2026-10-03）
 
-`showcase/` 的静态预览页在本地用无头 Chromium 按 1374×871、dpr 2 截图核对，覆盖新建会话、聊天页、模型选择、推理等级、账号菜单、插件设置六个场景，以及浅色／深色与「插件／原生」两种对照。核对结论：插件真实样式表与真实组件（`ModelControls`、`EffortPanel`、`ConfigPage`、`createStatsCard`）在仿真宿主上渲染正常；模型菜单、推理等级、统计卡片的页签与日期范围、配置页开关均可交互；正文溢出时 `data-ccd-fade-bottom` 与 `::after` 渐隐按样式表预期出现。
+静态预览页（原 `showcase/`、`scripts/build-showcase.mjs`、Pages 工作流）已按用户要求整体删除：仿真宿主外壳与真机偏差明显，展示价值不足以支撑维护成本，README 不再提供在线预览。本文件早前各轮里提到 `showcase/`、以「预览页实测／预览页视觉验收」为证据的条目都是当时的记录，对应证据图仍在 `docs/verification/local/showcase/`（仅本地，不随仓库发布）；此后新改动不再有这条验收路径，界面结论以真实 DSH 运行与同尺寸截图为准。
 
-**这不是真实 DSH 运行验证**：宿主外壳是手写的仿真层，`compat/*` 的观察器不参与，预览页只覆盖外观。证据为 `docs/verification/local/showcase/preview-*.png`（仅本地，不随仓库发布）。实现与边界见 [showcase/README.md](../showcase/README.md)。
+## 统计卡片进入配置页（2026-10-03）
+
+用户核对「统计卡片（默认关闭）吗？有配置项吗」后要求把它放进配置页。此前 `features.statistics` 只在 Host schema 里（YAML 进阶字段），配置页「模块」节只列 shell／sidebar／new-session／conversation／composer-pet 五项。
+
+改动：`features/settings/ConfigPage.tsx` 的 `OFFERED_FEATURES` 追加 `statistics`（排在末尾；页面注释写的是「真正会挂载东西的模块」，卡片本身就是 `implemented` 的 FeatureDefinition）。`features/settings/locales.ts` 两条文案由「常驻统计／Persistent statistics」改为「统计卡片／Statistics card」：这一行只控制卡片显不显示，聚合本身随插件总开关常驻，旧名字描述的是聚合。Host `Config`、默认值（`false`）与 `apply.ts` 的订阅路径都没动。
+
+为什么不需要新的代码路径：`apply.ts` 订阅 `configForms` 片段，配置变化时先释放旧作用域再 `mountFeatures(FEATURES, …)`，因此这一行与其它五行走同一条即时生效路径——打开即挂载卡片、关闭即释放，不需要重启。
+
+**本地检查。** `npm run check` 全绿：类型、架构与颜色归属、133 项测试、构建、包内容 72 文件。
+
+**真实运行：安装已交付，界面验收待重载确认。** 先前查 CLI 时只看了 PATH 与 `~/.dsh/dsh-runtimes`，漏掉应用自带的那一份；实际入口是 `<应用>/Contents/Resources/runtime/cli/bin/dsh`（[安装指南](../install.md) 第 1 节已登记，`--version` 读作 `0.2.0-rc.2`）。本轮按安装指南第 2 节执行：profile 配置备份到 `.ccd-style-backup.SsTN0B`，`npm run pack:local` 产出 72 文件的 `artifacts/install.2NMCUd/dsh-ccd-style-0.1.0.tgz`，由正式 CLI `plugin --profile desktop add` 装入。装入副本的 `lib/client.js` 与仓库构建逐字节一致（SHA-256 `2ba63c4cf8e2ebe9b7b99ab7951eacd9af66043de89ff28cad8989e7a070bd82`），包内已含 `OFFERED_FEATURES = [… "composer-pet", "statistics"]` 与 zh `feature.statistics`＝统计卡片、en＝Statistics card。用户配置里 `features.statistics` 本来就是 `true`，重载后这一行应显示为开。**运行中渲染进程尚未复验**：应用没有开 CDP 端口（只有 GUI 的 `127.0.0.1:19387`），界面验收等用户按 ⌘R 重载后确认；重载仍看不到时按安装指南第 6 节顺序检查 loader 停用与 `config.enabled`。
+
+**顺带修复（与本轮改动无关）。** 首次运行时 `tests/composer-pet.test.ts` 第 316～317 行报 TS2532：并发进行的鲸鱼喷水文案工作留下 `noUncheckedIndexedAccess` 下的数组下标访问，改为先取 `bands[0]!` 再读两段百分比，测试逻辑不变。
 
 ## 下一次验收
 
 本地执行 `npm run check`；界面变化按同尺寸截图核对，并针对生命周期或业务入口变化验证相应行为。Desktop 工具、隔离 Web 工具和依赖要求见 [当前实现](IMPLEMENTATION.md)。
 
-尚未覆盖的真实运行场景集中在 [待办](TECH_DEBT.md)。参考图与本地验收资料不随包或仓库发布；README 中的两张用户展示图保留在 `assets/`。
+尚未覆盖的真实运行场景集中在 [待办](TECH_DEBT.md)。设计参考图在 `docs/reference/`、验收证据在 `docs/verification/local/`、本机截图在 `assets/`，都不随包或仓库发布。

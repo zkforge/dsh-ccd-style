@@ -101,6 +101,23 @@ export interface SidebarRightTabsPort {
   subscribe(listener: () => void): Disposer;
 }
 
+/**
+ * The host's provisional New Sessions, as the sidebar column reads them.
+ *
+ * DSH creates the Session the moment its New Session entry is used and keeps
+ * the row in the list while `SessionSummary.blank` is true — the host's own
+ * fact for "created, no message yet". The Workspace browser shows the selected
+ * blank entry; the CCD column keeps every blank row out of the list, so the
+ * entry arrives with the first sent message. Filtering is presentation: the
+ * plugin writes no session state and hides nothing the host would call durable.
+ */
+export interface BlankSessionsPort {
+  /** Session ids the host still presents as a provisional New Session. */
+  ids(): ReadonlySet<string>;
+  /** Observe list replacements and row-state changes; returns the releaser. */
+  subscribe(listener: () => void): Disposer;
+}
+
 /** Actual SDK types, never a second definition of DSH component props. */
 export interface HostServices {
   readonly slots: Context['slots'];
@@ -114,6 +131,11 @@ export interface HostServices {
    */
   readonly themePreference: ThemePreferencePort | null;
   readonly workspace: Pick<UiWorkspace, 'openSession' | 'openWorkspace' | 'startSession'>;
+  /**
+   * Provisional New Sessions, or null on a build that does not publish the
+   * session list; a null port leaves the native rows exactly as they are.
+   */
+  readonly blankSessions: BlankSessionsPort | null;
   /** The settings transport carrying this plugin's own configuration section. */
   readonly configForms: ConfigFormsPort;
 }

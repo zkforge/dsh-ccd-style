@@ -1,8 +1,10 @@
 # DSH Claude Code Desktop Style · Agent 安装指南
 
-本指南用于让 agent 从源码完成 **预检 → 构建 → 安装 → 启用 → 验证**。目标环境为 **macOS + DeepSeek Harness Desktop `0.2.0-rc.2`**，浅色与深色两种配色都支持（深浅跟随 DSH 自己的主题偏好）。支持事实见 [兼容说明](docs/DSH_COMPATIBILITY.md)；项目介绍见 [README](README.md)。
+本指南用于让 agent 从源码完成 **预检 → 构建 → 安装 → 验证**。目标环境为 **macOS + DeepSeek Harness Desktop `0.2.0-rc.2`**，浅色与深色两种配色都支持（深浅跟随 DSH 自己的主题偏好）。首次安装在插件加载后自动开启风格；升级保留已保存的配置。支持事实见 [兼容说明](docs/DSH_COMPATIBILITY.md)；项目介绍见 [README](README.md)。
 
-> **给 agent 的指令：** 按本文安装并启用插件，保留现有 desktop profile 与其他插件配置。安装后报告构建检查、安装包、配置备份和实际启用状态；没有验证的步骤明确标为未验证。
+> **给 agent 的指令：** 按本文安装插件，验证首次安装自动启用；升级时保留已保存的开关，不把用户关闭的风格强制打开。保留现有 desktop profile 与其他插件配置。安装后报告构建检查、安装包、配置备份和实际启用状态；没有验证的步骤明确标为未验证。
+
+当前 npm 公开发布与市场收录尚未完成，本文使用源码构建的本地 tarball。发布准备与后续验收见 [发布说明](docs/RELEASE.md)。
 
 ## 1. 预检与取得源码
 
@@ -31,7 +33,7 @@ cd dsh-ccd-style
 
 ## 2. 一键构建并安装
 
-**在仓库根目录复制执行整段命令。** 该流程检查环境、备份 profile 配置、按锁文件安装依赖、运行打包前完整检查，再通过正式 CLI 安装。它不会自动打开视觉开关；继续完成第 3 节。
+**在仓库根目录复制执行整段命令。** 该流程检查环境、备份 profile 配置、按锁文件安装依赖、运行打包前完整检查，再通过正式 CLI 安装。首次安装的 bundle 配置自动开启风格；安装后按第 3 节重载并验证。已有用户覆盖配置优先。
 
 ```bash
 bash <<'SH'
@@ -88,7 +90,7 @@ cp "$PWD/artifacts/dsh-ccd-style-$ccd_version.tgz" "$ccd_tarball"
 
 echo "Installed package: $ccd_tarball"
 echo "Configuration backup: $ccd_backup"
-echo 'Next: reload DSH and enable the plugin; see install.md section 3.'
+echo 'Next: reload DSH and verify the style; see install.md section 3.'
 SH
 ```
 
@@ -132,19 +134,19 @@ SH
 - **要重启 DSH 才生效**：Chromium 在启动时枚举系统字体，往 `~/Library/Fonts/` 拷完文件后按 ⌘R 重载界面看不到，正常退出并重新打开应用即可；配置页的字体候选清单同样在页面加载时才抓。
 - 回退：`rm ~/Library/Fonts/Geist-Variable.ttf`（若是用户自己装的其他 `Geist*.ttf`，删那几个），再重启 DSH；插件本身不受影响（默认栈自动回落到系统字体）。
 
-## 3. 启用风格
+## 3. 重载与配置
 
 ### 方式 A：DSH 插件面板
 
-在 DSH 中按 **⌘R** 重新加载界面，打开侧栏「插件」→ `dsh-ccd-style` → 点开组件行 `ui-skin-ccd-style`，配置页里打开 **「启用 CCD 风格界面」**。改动即时生效，没有保存按钮。必要时正常重启应用；重启前保留当前工作。
+在 DSH 中按 **⌘R** 重新加载界面，首次安装应自动显示风格。打开侧栏「插件」→ `dsh-ccd-style` → 点开组件行 `ui-skin-ccd-style`，配置页里可以关闭或重新打开 **「启用 CCD 风格界面」**。改动即时生效，没有保存按钮。必要时正常重启应用；重启前保留当前工作。
 
 同一页面还可以改背景色与字体：`appearance.canvas`（会话／画布）、`appearance.sidebar`（侧栏）接受 `#rrggbb`，`fonts.uiLatin`／`fonts.uiCjk`／`fonts.code` 接受本机已安装的字体族名（点开下拉框是本机字体菜单，可搜索滚动；清单外的族名在搜索框里输入后回车提交）；留空即用内置值——界面默认栈以 `Geist` 打头，填了自定义族名时它排在最前，点「恢复默认」清掉覆盖。保存写入当前 profile 的 `cordis.patch.yml`，只写变化的字段。总开关关闭后配置页仍然存在，可以随时开回来。
 
-安装成功时默认 `enabled: false`，界面保持原生是正常现象。浅色与深色都可用：页面顶部的「外观 → 主题」三格（跟随系统／浅色／深色）写的是 DSH 自己的主题偏好，切换立即生效。验收两种配色时，注意自定义背景色只作用于浅色，深色用的是插件内置深色调色板。
+安装 bundle 写入 `enabled: true`；已有用户层的 `enabled: false` 或 loader 的 `disabled: true` 仍优先，升级不会强制改写它们。浅色与深色都可用：页面顶部的「外观 → 主题」三格（跟随系统／浅色／深色）写的是 DSH 自己的主题偏好，切换立即生效。验收两种配色时，注意自定义背景色只作用于浅色，深色用的是插件内置深色调色板。
 
 ### 方式 B：Agent 合并 profile 配置
 
-若 agent 可以编辑 profile 文件，可设置 `<profile>/cordis.patch.yml`。第 2 节已备份既有文件；若直接使用本节，先建立独立备份。将以下覆盖条目**合并到既有顶层 patch 列表**：
+首次安装无需写用户层覆盖。只有用户明确要求重新启用已关闭的风格或调整配置时，agent 才按本节设置 `<profile>/cordis.patch.yml`。第 2 节已备份既有文件；若直接使用本节，先建立独立备份。将以下覆盖条目**合并到既有顶层 patch 列表**：
 
 ```yaml
 - id: ui-skin-ccd-style

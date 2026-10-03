@@ -113,15 +113,17 @@ html[data-dsh-ccd-style="true"] ._3WPZCG_root:not(._3WPZCG_collapsed) [data-slot
 
 /* "+ New": a flat navigation row rather than a raised button. Its trailing gap
    is the panel list's own row gap, so New Session, the global panels and the
-   automation panel read as one stack instead of two blocks. */
+   automation panel read as one stack instead of two blocks. The row is the
+   reference's 26px navigation height with an 8px corner — the same geometry
+   the panel rows below it use, so the three rows sit on one pitch. */
 html[data-dsh-ccd-style="true"] ._3WPZCG_root:not(._3WPZCG_collapsed) ._3WPZCG_newSession,
 html[data-dsh-ccd-style="true"][data-platform="darwin"] ._3WPZCG_root:not(._3WPZCG_collapsed) ._3WPZCG_newSession {
   justify-content: flex-start;
-  height: 30px;
+  height: var(--ccd-nav-row-height);
   margin: 0 0 var(--ccd-nav-gap);
   padding: 0 8px;
   border: 0;
-  border-radius: var(--ccd-composer-radius);
+  border-radius: var(--ccd-radius-row);
   background: transparent;
   color: var(--ccd-text);
   font-size: var(--ccd-font-size-body);
@@ -153,22 +155,45 @@ html[data-dsh-ccd-style="true"] ._3WPZCG_root:not(._3WPZCG_collapsed) ._3WPZCG_p
 }
 
 html[data-dsh-ccd-style="true"] ._3WPZCG_root:not(._3WPZCG_collapsed) ._3WPZCG_panelRow {
-  min-height: 30px;
+  min-height: var(--ccd-nav-row-height);
   margin: 0;
-  padding: 4px 8px;
-  border-radius: var(--ccd-composer-radius);
-  color: var(--ccd-text);
+  padding: 3px 8px;
+  border-radius: var(--ccd-radius-row);
+  color: var(--ccd-text-nav);
   font-size: var(--ccd-font-size-body);
   line-height: 20px;
 }
 
-html[data-dsh-ccd-style="true"] ._3WPZCG_root:not(._3WPZCG_collapsed) ._3WPZCG_panelRow._3WPZCG_panelActive,
-html[data-dsh-ccd-style="true"] ._3WPZCG_root:not(._3WPZCG_collapsed) ._3WPZCG_panelRow:hover {
-  background: var(--ccd-hover);
+/* Current row versus hover. The reference paints the row you are on one step
+   darker than the row you are merely pointing at; the host marks the current
+   panel with `panelActive`, so the two states take two different steps here
+   instead of sharing the hover grey. */
+html[data-dsh-ccd-style="true"] ._3WPZCG_root:not(._3WPZCG_collapsed) ._3WPZCG_panelRow._3WPZCG_panelActive {
+  background: var(--ccd-selected);
+  color: var(--ccd-text);
 }
 
+html[data-dsh-ccd-style="true"] ._3WPZCG_root:not(._3WPZCG_collapsed) ._3WPZCG_panelRow:hover {
+  background: var(--ccd-hover);
+  color: var(--ccd-text);
+}
+
+/* One glyph size across the stack. The three marks arrive from three different
+   owners at a 16px box; the plugins-panel sparkle paints nearly edge to edge
+   (measured 15px of ink against the other two glyphs' 13px), so the panel rows
+   take their artwork down to 14px, which lands that mark beside the others. */
 html[data-dsh-ccd-style="true"] ._3WPZCG_root:not(._3WPZCG_collapsed) ._3WPZCG_panelGlyph {
-  color: var(--ccd-text-secondary);
+  color: var(--ccd-text-nav);
+}
+
+html[data-dsh-ccd-style="true"] ._3WPZCG_root:not(._3WPZCG_collapsed) ._3WPZCG_panelGlyph svg {
+  width: 14px;
+  height: 14px;
+}
+
+html[data-dsh-ccd-style="true"] ._3WPZCG_root:not(._3WPZCG_collapsed) ._3WPZCG_panelRow:hover ._3WPZCG_panelGlyph,
+html[data-dsh-ccd-style="true"] ._3WPZCG_root:not(._3WPZCG_collapsed) ._3WPZCG_panelRow._3WPZCG_panelActive ._3WPZCG_panelGlyph {
+  color: var(--ccd-text);
 }
 
 html[data-dsh-ccd-style="true"] ._3WPZCG_regionArea {
@@ -177,7 +202,8 @@ html[data-dsh-ccd-style="true"] ._3WPZCG_regionArea {
   padding-left: 0;
 }
 
-/* Browsing region: quiet section label, compact project and session rows. */
+/* Browsing region: no section title, project rows that carry their own create
+   button, compact session rows. */
 html[data-dsh-ccd-style="true"] ._3WPZCG_root:not(._3WPZCG_collapsed) ._7514NG_root {
   --dsh-session-list-edge-inset: 0px;
   padding-right: 0;
@@ -193,19 +219,123 @@ html[data-dsh-ccd-style="true"] ._3WPZCG_root:not(._3WPZCG_collapsed) ._7514NG_s
   color: var(--ccd-text-muted);
 }
 
-html[data-dsh-ccd-style="true"] ._3WPZCG_root:not(._3WPZCG_collapsed) ._7514NG_sectionLabel {
-  font-size: 12px;
-  line-height: 18px;
+/* The reference has no title over the browsing region: the list starts straight
+   after the navigation stack. The header row stays for its three icon buttons
+   (search, view options, add workspace), each of which carries its own accessible
+   name, so dropping the decorative label costs no entry point. */
+html[data-dsh-ccd-style="true"] ._7514NG_sectionLabel {
+  display: none;
 }
 
-html[data-dsh-ccd-style="true"] ._3WPZCG_root:not(._3WPZCG_collapsed) ._7514NG_listArea {
+/* Add workspace: the host draws a folder with a plus; the reference's rows use a
+   bare mark, so the button keeps its own hit box and callback and takes the
+   shared plus artwork over a 14px box. */
+html[data-dsh-ccd-style="true"] ._7514NG_headerActions > button:last-child svg,
+html[data-dsh-ccd-style="true"] ._7514NG_headerActions > *:last-child button svg {
+  display: none;
+}
+
+html[data-dsh-ccd-style="true"] ._7514NG_headerActions > button:last-child::before,
+html[data-dsh-ccd-style="true"] ._7514NG_headerActions > *:last-child button::before {
+  content: "";
+  width: 14px;
+  height: 14px;
+  background-color: currentColor;
+  mask: var(--ccd-icon-plus) center / 14px 14px no-repeat;
+}
+
+/* View options: the reference's two-knob control stands upright, and the host's
+   own artwork is that same control lying down, so the glyph is rotated rather
+   than redrawn. */
+html[data-dsh-ccd-style="true"] ._7514NG_headerActions > button:first-child svg,
+html[data-dsh-ccd-style="true"] ._7514NG_headerActions > *:first-child button svg {
+  transform: rotate(90deg);
+}
+
+html[data-dsh-ccd-style="true"] ._7514NG_listArea {
   margin: 0;
   padding: 0;
 }
 
+/* Project rows. The host already sizes this row at the reference's 34px — pinned
+   here so the stack's pitch is a plugin value — and the 4px inline start drops
+   the label onto the reference's own 14px edge, which is where the folder glyph
+   used to sit. Nesting depth still arrives through `--dsh-workspace-indent`, so
+   grouped views keep their step. */
 html[data-dsh-ccd-style="true"] .jJkEga_projectRow {
-  height: 30px;
+  height: 34px;
+  padding-inline-start: calc(4px + var(--dsh-workspace-indent, 0px));
   color: var(--ccd-text-secondary);
+}
+
+/* No leading folder: the reference marks a project by its name alone, and the
+   open/close state is carried by the disclosure mark after the label. */
+html[data-dsh-ccd-style="true"] .jJkEga_projectRow .jJkEga_folder {
+  display: none;
+}
+
+/* The host reveals this mark on hover and keeps the text flexible; here it is
+   the row's permanent disclosure control, sitting right after the label. The
+   host's own state still owns the turn — `arrowOpen` rotates the mark a quarter
+   turn — but its artwork is a filled triangle where the reference draws a line
+   chevron, so the mark slot paints the shared chevron geometry instead. */
+html[data-dsh-ccd-style="true"] .jJkEga_projectRow .jJkEga_projectText {
+  flex: 0 1 auto;
+}
+
+html[data-dsh-ccd-style="true"] .jJkEga_projectRow .jJkEga_chevron {
+  display: inline-flex;
+  order: 1;
+  transition: transform 0.15s var(--ds-ease-in-out, ease-in-out);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html[data-dsh-ccd-style="true"] .jJkEga_projectRow .jJkEga_chevron {
+    transition: none;
+  }
+}
+
+html[data-dsh-ccd-style="true"] .jJkEga_projectRow .jJkEga_chevron svg {
+  display: none;
+}
+
+html[data-dsh-ccd-style="true"] .jJkEga_projectRow .jJkEga_chevron::before {
+  content: "";
+  width: 16px;
+  height: 16px;
+  background-color: currentColor;
+  mask: var(--ccd-icon-chevron-right) center / 16px 16px no-repeat;
+}
+
+html[data-dsh-ccd-style="true"] .jJkEga_projectRow .jJkEga_chevron:has(.jJkEga_arrowOpen) {
+  transform: rotate(90deg);
+}
+
+/* Project text then disclosure, with the row's actions pinned to the trailing
+   edge: `order` moves the mark after the label without touching the host's DOM.
+   Both actions are permanent — the create button mirrors the reference's
+   always-visible row action, and the overflow trigger has to stay laid out
+   while its own menu is open: the host closes that menu once the pointer leaves
+   a trigger that is no longer there, which a hover-only trigger does the moment
+   the pointer sets off towards the list. */
+html[data-dsh-ccd-style="true"] .jJkEga_projectRow .jJkEga_rowActions {
+  display: inline-flex;
+  order: 2;
+  margin-left: auto;
+}
+
+html[data-dsh-ccd-style="true"] .jJkEga_projectRow .jJkEga_rowActions > button:last-child svg,
+html[data-dsh-ccd-style="true"] .jJkEga_projectRow .jJkEga_rowActions > *:last-child button svg {
+  display: none;
+}
+
+html[data-dsh-ccd-style="true"] .jJkEga_projectRow .jJkEga_rowActions > button:last-child::before,
+html[data-dsh-ccd-style="true"] .jJkEga_projectRow .jJkEga_rowActions > *:last-child button::before {
+  content: "";
+  width: 14px;
+  height: 14px;
+  background-color: currentColor;
+  mask: var(--ccd-icon-plus) center / 14px 14px no-repeat;
 }
 
 html[data-dsh-ccd-style="true"] .jJkEga_projectRow .jJkEga_title {
@@ -213,8 +343,34 @@ html[data-dsh-ccd-style="true"] .jJkEga_projectRow .jJkEga_title {
   color: var(--ccd-text-muted);
 }
 
+/* A project row never fills: the host still paints its generic hover grey, so
+   that fill is cleared and the row answers with ink instead — the label steps
+   up to full strength while the pointer is on it. The host's open-menu anchor
+   is kept: that fill marks a menu this row raised, not a hover. */
+html[data-dsh-ccd-style="true"] .jJkEga_projectRow:hover {
+  background: transparent;
+}
+
+html[data-dsh-ccd-style="true"] .jJkEga_projectRow:hover .jJkEga_title {
+  color: var(--ccd-text);
+}
+
+html[data-dsh-ccd-style="true"] .jJkEga_projectRow.jJkEga_menuOpen {
+  background: var(--dsh-alias-interactive-bg-hover);
+}
+
 html[data-dsh-ccd-style="true"] .jJkEga_sessionRow {
   height: 28px;
+}
+
+/* The row's leading 16px cell is the reference's shape already — the label
+   lands on the same 38px edge as a navigation label. What arrives there is
+   either a 6px solid state dot or the 14px activity ring; the ring is scaled to
+   8px so its 1.5px stroke reads as the reference's 6px mark instead of a
+   full-size spinner. */
+html[data-dsh-ccd-style="true"] .jJkEga_sessionRow > .jJkEga_slot > svg[data-state="ongoing"] {
+  width: 8px;
+  height: 8px;
 }
 
 html[data-dsh-ccd-style="true"] .jJkEga_sessionRow .jJkEga_title {
@@ -228,7 +384,6 @@ html[data-dsh-ccd-style="true"] .jJkEga_sessionRow {
   border-radius: 8px;
 }
 
-html[data-dsh-ccd-style="true"] .jJkEga_projectRow:hover,
 html[data-dsh-ccd-style="true"] .jJkEga_sessionRow:hover,
 html[data-dsh-ccd-style="true"] .jJkEga_sessionRow.jJkEga_selected {
   background: var(--ccd-selected);
@@ -236,6 +391,17 @@ html[data-dsh-ccd-style="true"] .jJkEga_sessionRow.jJkEga_selected {
 
 html[data-dsh-ccd-style="true"] .jJkEga_time {
   color: var(--ccd-text-muted);
+}
+
+/* Provisional New Session row. DSH creates the Session with the click on New
+   Session and keeps the row in the list while the host still calls it `blank`;
+   the column shows the new-session page alone and lets the entry arrive with
+   the first sent message. `compat/blank-session-rows.ts` writes the marker from
+   the host's own `blank` fact — the stylesheet only hides what it tagged, so an
+   untagged (native or unsupported) row is never touched. The row keeps its
+   place in the host's list model; only the list's presentation drops it. */
+html[data-dsh-ccd-style="true"] [data-row-key^="session:"][data-ccd-blank-session] {
+  display: none;
 }
 
 /* Foot: the settings entry reads as the reference's account row. */

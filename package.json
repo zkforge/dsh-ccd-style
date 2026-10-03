@@ -1,9 +1,22 @@
 {
   "name": "dsh-ccd-style",
   "version": "0.1.0",
-  "private": true,
   "license": "MIT",
   "description": "CCD-style presentation plugin for DeepSeek Harness desktop",
+  "author": "zkforge",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/zkforge/dsh-ccd-style.git"
+  },
+  "homepage": "https://github.com/zkforge/dsh-ccd-style#readme",
+  "bugs": {
+    "url": "https://github.com/zkforge/dsh-ccd-style/issues"
+  },
+  "keywords": ["dsh", "dsh-plugin", "deepseek-harness", "desktop", "theme", "ccd"],
+  "publishConfig": {
+    "access": "public",
+    "registry": "https://registry.npmjs.org/"
+  },
   "type": "module",
   "main": "./lib/index.js",
   "types": "./lib/types/host/index.d.ts",
@@ -76,6 +89,7 @@
     "@types/react": "18.3.1",
     "esbuild": "0.28.2",
     "react": "18.3.1",
-    "typescript": "7.0.2"
+    "typescript": "7.0.2",
+    "yaml": "2.9.1"
   }
 }

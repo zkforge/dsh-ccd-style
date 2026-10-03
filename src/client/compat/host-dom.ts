@@ -23,12 +23,17 @@
  * - `packages/client/ui-attachment/src/client/ComposerAttachments.module.css` (`dVdiKa_`)
  * - `packages/client/ui-chat/src/client/chat/StatsPills.module.css` (`OpZ85W_`)
  * - `packages/client/ui-workspace/src/client/WorkspaceBrowser.module.css` (`_7514NG_`)
+ * - `packages/client/ui-workspace/src/client/rows/Rows.tsx` (`data-row-key` on the
+ *   Workspace and Session rows: `workspace:<key>` / `session:<id>`)
  * - `packages/client/ui-settings/src/client/SettingsRoot.module.css` (`Dws9Sa_`)
  * - `packages/client/ui-settings-account/src/client/AccountMenu.module.css` (`ZogL4G_`)
  * - `packages/client/ui-primitives/lib/Menu.module.css` (`_4ub78_`, `_ri079_`)
  * - `packages/client/ui-primitives/lib/Menu.js` (`MenuItemButton`: the icon seat
  *   `account-menu.css` scales; its `[role="menuitem"] > span` structure)
  * - `packages/client/ui-chat/src/client/chat/AssistantMarkdown.module.css` (`gKv1-q_`)
+ * - `packages/client/ui-chat/src/client/chat/ChatView.module.css` (`icaHSq_`: the
+ *   transcript scroll area and the floating jump-to-bottom control it renders
+ *   below the transcript while the reader is off the tail)
  * - `packages/client/ui-primitives/lib/markdown/MarkdownText.module.css`
  *   (static web-frontend bundle: `_1ypvv_`; shared by Web and Desktop)
  */
@@ -88,6 +93,14 @@ export const HOST = Object.freeze({
   markdownBody: '._markdown_1ypvv_5:not([data-markdown-variant="compact"])',
   markdownFileMention: '._fileMention_1ypvv_85',
   conversationScroll: '.ST7X_W_scrollBody',
+  /** ChatView.module.css: the transcript's own scroll column, inside the page's
+      scroll viewport, and the two shells of the floating jump-to-bottom control
+      that ChatView renders off the tail. `conversation.css` places and sizes
+      that control; no TypeScript reads it. */
+  chatViewScroll: '.icaHSq_scroll',
+  chatViewColumn: '.icaHSq_column',
+  chatViewToBottomSlot: '.icaHSq_toBottomSlot',
+  chatViewToBottom: '.icaHSq_toBottom',
   conversationTabs: '.ST7X_W_tabs',
   conversationTab: '.ST7X_W_tab',
   conversationTabActive: '.ST7X_W_tabActive',
@@ -154,6 +167,13 @@ export const ANCHOR = Object.freeze({
   frame: '[data-slot="root"] > div',
   sidebar: '[data-slot="sidebar"]',
   workspaces: '[data-slot="sidebar.workspaces"]',
+  /**
+   * Every keyed row of the Workspace browser's tree, including the Session rows
+   * `blank-session-rows.ts` filters. `data-row-key` is the host's own identity
+   * for a row and survives its class hashes; the `empty` placeholder and the
+   * Workspace headers share the attribute with other prefixes.
+   */
+  sessionRows: '[data-row-key^="session:"]',
   settings: '[data-slot="sidebar.settings"]',
   conversation: '[data-conversation-content]',
   /** The element that actually scrolls the Conversation page. In the pinned
@@ -162,6 +182,14 @@ export const ANCHOR = Object.freeze({
   conversationScroll: '[data-conversation-scroll]',
   composerSeat: '[data-composer-seat]',
   composerCard: '[data-composer-card]',
+  /**
+   * The blank-session Composer card. `ConversationRoot` (the pinned `.ST7X_W_root`
+   * class, `ConversationMainPanel`) writes `data-phase` on its root and `InputBar`
+   * renders the card inside it; the root class is what keeps this match off the
+   * editor's own `data-phase` input. `conversation.input.overlay` renders only
+   * with a Session, so this is the seat the no-session pet is measured from.
+   */
+  composerCardHero: `${HOST.conversationRoot}[data-phase="hero"] [data-composer-card]`,
 } as const);
 
 export interface HostProbe {
