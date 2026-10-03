@@ -28,25 +28,9 @@ export interface EdgeFadeState {
 }
 
 /**
- * The one fact about the Conversation transcript a stylesheet cannot work out:
- * whether content continues past either edge of the scroll viewport.
- *
- * DSH's own internal-request viewer softens both edges with a 24px stencil
- * and switches each side on only while that side still has content; the
- * transcript has never had it. This module publishes the same two facts as
- * attributes (`data-ccd-fade-top`／`data-ccd-fade-bottom`) on the scroller
- * (`[data-conversation-scroll]`, the host's stable anchor for the element that
- * actually scrolls — the transcript column inside it is `overflow: visible`),
- * plus where the bottom edge of the visible transcript really is — the
- * resident Composer's top, published as `--ccd-fade-bottom-inset` on the page
- * body. `features/conversation/conversation.css` paints the stencil from
- * there, as overlays rather than as a `mask` on the scroller: the Composer is
- * a child of the scroller, and a mask would erase it along with the text.
- *
- * @param scrollTop - the scroller's current scroll offset.
- * @param scrollHeight - the scroller's content height.
- * @param clientHeight - the scroller's viewport height.
- * @returns which edges still hide content.
+ * Determine whether content extends past each edge of the scroll viewport.
+ * The mount publishes those flags and the sticky Composer's top inset for
+ * the page's gradient overlays; the Composer is a child of the scroll viewport.
  */
 export function edgeFadeState(scrollTop: number, scrollHeight: number, clientHeight: number): EdgeFadeState {
   const range = scrollHeight - clientHeight;

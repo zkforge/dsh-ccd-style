@@ -16,27 +16,11 @@ interface Annotation {
 }
 
 /**
- * Turn the native "open in app" split button into one generic glyph that opens
- * the application menu.
- *
- * `ui-open-in-app/OpenTargetButton` renders two halves: `.iq4beG_main` launches
- * the remembered application directly, and `.iq4beG_chevron` — the only control
- * that opens the application menu — renders only while a menu exists. The
- * stylesheet stretches that chevron over the whole box and paints shared artwork
- * over both halves; it needs two facts from the DOM that CSS cannot express:
- *
- * 1. whether a menu exists at all. Without one the glyph would promise a
- *    chooser that cannot appear, so the control is marked `direct` and hidden;
- * 2. the stretched half's accessible name. The host names it from `path.more`
- *    and the covered half from `path.open.title`, neither of which describes
- *    what a click now does.
- *
- * Nothing is re-parented and no host callback is replaced: the menu, its items,
- * its icon route and its failure toast stay entirely the host's.
- *
- * @param document - renderer document carrying the Conversation header.
- * @param report - error sink owned by the caller's cleanup scope.
- * @returns disposer restoring every attribute and marker this module wrote.
+ * Annotate ui-open-in-app/OpenTargetButton for a full-box application-menu
+ * trigger. Its main half launches directly; the chevron opens the menu and
+ * exists only when applications are available. Publish menu availability and
+ * update accessible names to match the enlarged trigger.
+ * @returns disposer that restores attributes and markers.
  */
 export function mountOpenTargetMode(document: Document, report: (error: unknown) => void): Disposer {
   /** Anchors carrying the mode marker, including the ones with no annotation. */

@@ -1,7 +1,7 @@
 /*
  * New-session statistics card. Numbers come from the reference card's own
  * values (Tailwind classes) cross-checked against its @2x screenshots; see
- * docs/STATS_RESEARCH.md. Colours are theme variables only.
+ * theme/tokens.css. Colours are theme variables only.
  *
  * The card is absolutely positioned under the host's greeting: the hero
  * Composer stack sits at the bottom of the column and the greeting is lifted

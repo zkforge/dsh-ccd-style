@@ -1,25 +1,7 @@
 /**
- * Host half of the statistics card: one projection unit, one aggregate, one
- * authenticated route.
- *
- * Reading strategy (the host's own read ladder, in order of cost):
- *
- * 1. A **live** session is read through `ctx.sessionProjections.snapshot`,
- *    which folds the in-memory log lazily and is otherwise free.
- * 2. A **cold** session is read through `ctx.sessionProjectionCache`, the
- *    durable checkpoint the host already writes for every session. This is
- *    the zero-I/O face, so a warm install answers the card without touching a
- *    single session log.
- * 3. A session with no usable checkpoint is folded once in the background
- *    through a persistence read handle; the fold writes its checkpoint back,
- *    so the next request is case 2 again. Failures are contained per session
- *    and retried after a cooldown.
- *
- * Delivery is the host's authenticated fetch registry, not a bare web-server
- * route: `ctx.connection.fetch` applies the browser trust fence and the
- * session cookie before the handler runs, so this plugin never hand-rolls an
- * access check. Both services are optional at runtime — without them the card
- * simply stays hidden.
+ * Read live session projections first, then durable checkpoints, then cold-fold
+ * missing checkpoints in the background. Failed sessions retry after cooldown.
+ * Aggregates are served through the host's authenticated connection.fetch route.
  */
 import type { Context } from '@deepseek-ai/cordis';
 import type { Session, SessionHeader } from '@deepseek-ai/dsh-session';

@@ -1,79 +1,54 @@
-<div align="center">
-
 # DSH Claude Code Desktop Style
 
-Claude Code Desktop 风格布局，DSH 原生能力。<br>
+为 DeepSeek Harness Desktop 提供 Claude Code Desktop 风格的侧栏、新会话页、聊天页与输入区。
 
-面向 **DeepSeek Harness Desktop** 的类 Claude Code Desktop 风格界面插件，调整侧栏、新建会话页、聊天页与输入区的布局和观感。
+支持 macOS、DSH `0.2.0-rc.2`，浅色与深色模式。首次安装后自动开启，升级沿用已保存的配置。
 
-</div>
+## 安装
 
----
-
-## 📥 安装指南
-
-兼容 **macOS · DSH Desktop `0.2.0-rc.2`**。首次安装后，插件加载即自动开启风格；升级保留已保存的开关、颜色、字体和模块配置。关闭风格可在「插件 → dsh-ccd-style → ui-skin-ccd-style」操作。
-
-**发布状态：npm 包正在准备，尚未发布；插件市场尚未收录。当前可使用下方源码安装方式。**
-
-### 官方插件页（npm 发布后可用）
-
-打开 DSH 侧栏「插件」→「添加插件」，输入 `dsh-ccd-style` 并安装。按宿主提示重载或重启后，首次安装自动显示风格。
-
-### 终端安装（npm 发布后可用）
-
-```sh
-dsh plugin --profile desktop add dsh-ccd-style
-```
-
-使用与桌面应用相同的 `DSH_HOME` 和 profile。若终端找不到 `dsh`，默认 macOS 应用的完整命令为：
-
-```sh
-"/Applications/DeepSeek Harness.app/Contents/Resources/runtime/cli/bin/dsh" plugin --profile desktop add dsh-ccd-style
-```
-
-`--profile web` 安装到 Web profile；当前支持范围以桌面版为准，不能用它代替 `desktop`。
-
-### 插件市场（待收录）
-
-收录后可在对应市场搜索 `dsh-ccd-style` 并安装。市场名称与具体入口将在完成收录、安装验收后补充。
-
-### 从源码安装（当前可用）
-
-复制下面的指令，让 Agent 按 [安装指南](https://github.com/zkforge/dsh-ccd-style/blob/main/install.md) 完成环境检查、构建、安装和验证：
+当前使用[源码安装](https://github.com/zkforge/dsh-ccd-style/blob/main/install.md)。复制以下指令交给 Agent：
 
 ```text
-请读取 https://github.com/zkforge/dsh-ccd-style/blob/main/install.md，
-在本机安装 DSH Claude Code Desktop Style 并验证首次安装自动启用，保留已有 profile 和其他插件配置；升级时保留原有启用状态。
+请按 https://github.com/zkforge/dsh-ccd-style/blob/main/install.md 安装 DSH Claude Code Desktop Style。
 ```
 
-## 🎬 截图
+npm 发布及市场收录完成后，可使用以下入口：
 
-## ✨ 特性
+| 入口 | 安装方式 |
+| --- | --- |
+| 官方插件页 | 「插件 → 添加插件」输入 `dsh-ccd-style` |
+| 终端 | `dsh plugin --profile desktop add dsh-ccd-style` |
+| 插件市场 | 搜索 `dsh-ccd-style` 并安装 |
 
-- **DeepSeek 专属宠物** — **只在新会话页**：输入卡顶边右角坐着一只 32×24 手绘小鲸鱼（蓝身、浅腹、上扬尾鳍），纯插件自绘，不引入任何第三方宠物素材。DSH 把「还没有会话／会话没发过消息」这一页标成 `data-phase="hero"`，插件只在那张卡片上量座位，**一开聊它就消失**，正常对话里看不到。它不读会话、不持有状态、**不可点**，也不占用那个角落的指针事件；待机时眨眼、尾鳍偶尔抬一格。
-- **会话淡入遮罩** — 正文滚动视口上下边缘各 24px 渐隐，且只在那一侧还有内容时出现：停在顶部时首行不压暗，滚到底时末行保持实心。下缘贴在常驻输入卡的上沿，并用画布色铺满整个 Composer 占位区，避免正文从半透明卡面透出「鬼影」。它是画上去的渐隐层，不是给视口加 `mask`——那样会把输入卡一起擦掉。
-- **右上角的快捷按键** — 会话顶栏尾侧收成一条 28×28 命中盒的快捷簇（打开方式 →（日程）→ 终端 → 浏览器 → 更多 → 右侧栏开关），终端与浏览器直接打开右侧栏对应页签、已有同类页签时聚焦它；列宽 ≤520px 降为 24×24，≤420px 再省略会话标题，原生按钮与回调全部保留。
-- **Claude 风格侧栏** — 导航行收敛到 26px 行高、8px 圆角与参考实测的选中／悬停墨色；工作区列表按参考重排（项目行 34px、行尾「新建会话」与「…」常驻、会话行 8px 活动环），标题行只留右侧三颗 28px 按钮；收起态沿用宿主自己的图标轨几何；新会话条目按第一次发送出现，插件只借宿主自己的 `blank` 字段把它挡在列表外，不建会话。
-- **effort 选择器滑块** — 模型旁的 effort 按钮打开约 220px 白色浮层：Faster／Smarter 轴上的真实档位滑块，带磁性拖动、阻尼弹簧与最高档紫色像素场，支持键盘与「减少动态效果」；吸附完成才提交，与模型共用官方 ModelDirectory，失败回到已保存的值。
-- **消息正文的 Markdown 样式** — 助手正文在 770px 列宽内重排：链接常驻蓝色实线下划线，行内代码红字等宽＋浅灰底＋5px 圆角，表格合成单张圆角卡片（无竖线、表头浅灰填充），代码块是白底圆角卡片、原生高亮与复制入口保留；宽表收回正文列，与输入框左右缘对齐。用户消息、紧凑推理与工具 Markdown 保留原生样式。
-- **深色模式（跟随宿主）** — 深浅两套调色板各自把全部颜色变量声明一遍（根标记块与宿主自己的 `body[data-ds-dark-theme]` 块），token 层按 `{ light, dark }` 成对下发；主题偏好仍由 DSH 持有，插件只跟随，不新增开关，配置页的「跟随系统／浅色／深色」写的是同一份宿主偏好，因此不会与宿主 Appearance 行打架。深色画布 `#262624`、侧栏 `#1f1e1d`、卡片 `#30302e`、边框 `#3e3e3b`，正文与次级文字对画布对比度 13.2:1／7.1:1（浅色 16.1:1／4.9:1）；滑块轨道在两种配色里都下沉，避免选中格与槽同色，effort 浮层、表格、代码卡片与边缘渐隐都只消费变量，两色一起跟随。
-- **应用内配置页** — 侧栏「插件」→ `dsh-ccd-style` → `ui-skin-ccd-style` 行打开：总开关、六个已挂载模块的开关（shell／sidebar／new-session／conversation／composer-pet／statistics）、外观主题、两项自定义背景色（会话画布与侧栏）与界面／代码字体；`features.tool-calls` 尚未实现，`debug` 与 `fonts.uiCjk` 这类进阶字段只能走 YAML。改动即时生效、没有保存按钮，非法色值或字体名就地拦下并提示；页面挂在常驻作用域，关掉界面后仍然存在，可以随时把界面开回来。
-- **自定义背景色与字体** — 颜色只配「画布 + 侧栏」两项，其余（卡片、轨道、悬停、选中、三档分隔线）由插件按配置色派生，同时同步宿主语义 token；自定义色只作用于浅色。字体有行内候选列表（首次展开调 `queryLocalFonts()`，可搜索、↑↓／Enter／Esc、候选项用自身字体预览），也可手填族名；留空则不覆盖任何字体变量。
-- **统计卡片（默认关闭）** — 配置页「模块」里有「统计卡片」这一行（`features.statistics`，默认 `false`），也可以直接写 profile 的 `cordis.patch.yml`。打开后 Host 半用投影单元折叠每条会话日志、以 durable 检查点做零 I/O 读取，跨会话聚合挂在宿主已鉴权的 fetch 通道上，浏览器半只读一个 JSON；聚合随插件总开关常驻（与卡片开关无关），因此开关卡片本身不需要重启。卡片含 Overview／Models 与 All／30d／7d：3×2 统计格、26×7 贡献热力图、模型堆叠柱状图与图例，悬浮给深色读数提示；数据是真实的，首次冷折完成前不画卡片。
-- **新会话页与输入区几何** — 问候块、统计卡片与输入卡共用同一条左边缘（输入卡最大 770px），芯片行与输入面板左缘对齐，默认提示语与聊天页统一且工作区／阻断提示优先。输入面板最小 42px、控制行 28px，发送／停止按钮钉在右下（24px 按钮、16px 图标）；原生速率、缓存命中与上下文环前置到模型选择之前，窄列只留图标，模型组按剩余空间限宽并优先保住 effort 与权限控件。
-- **顶栏与视图切换器** — 聊天顶栏合并成 49px 单行、下缘发丝线隐去，标题栏与正文连成一片；对话／轨迹固定 80×22 轨道、每格 40×22，滑块落在宿主自己的按钮上，切换 180ms 动画，框架轨道变化即时校正，「减少动态效果」下关掉动画。空白会话页只保留角落那个入口，仍在列右缘 12px 处。
-- **宿主控件的展示适配** — 账号菜单的页眉改成宿主账号名（236px、28px 行高，原生条目与回调保留）；贴窗口底边的菜单（账号、工作区选择器、Agent 预设）在锚点上方空间不够时整块翻到上方并连同高度上限一起收，离开菜单表面即撤销；「打开方式」在宿主没有可选应用时整块不渲染、点击行为与标注一致；新会话默认提示语按当前语言重写，工作区与阻断提示优先，释放时只在仍是插件写入值时恢复。
-- **不夺取宿主所有权** — 不替换官方 Composer、侧栏与会话壳，原生按钮、菜单、回调与工具展开始终可点；插件只追加样式和自己声明的属性／标记，DOM 不存在时保留原生 UI。每个注册、监听、观察器与异步资源都归属清理作用域，停用或改配置时按逆序释放并恢复原值。
+## 功能
 
-## 🤝 参与贡献
+- 紧凑侧栏、工作区导航与会话列表，新会话条目在第一次发送后出现。
+- 统一的新会话页、输入卡片和聊天布局，正文边缘随滚动渐隐。
+- 模型与 effort 独立选择器，支持搜索、滑块和键盘操作。
+- 会话顶栏提供终端、浏览器和应用打开入口。
+- Markdown 链接、行内代码、表格与代码块样式。
+- 新会话页的像素小鲸鱼，待机眨眼与摆尾。
+- 跟随 DSH 的浅色、深色和系统主题，支持自定义背景色与字体。
+- 用量统计卡片：Overview／Models 视图、时间范围、贡献热力图与模型图表，默认关闭。
 
-欢迎提交 [Issue](https://github.com/zkforge/dsh-ccd-style/issues) 或 Pull Request。报告界面问题时，请提供 DSH 版本、系统、主题、窗口尺寸、复现步骤，以及隐藏敏感信息后的截图。
+## 配置
 
-## ⭐ Star History
+打开「插件 → dsh-ccd-style → ui-skin-ccd-style」，调整总开关、模块、主题、颜色和字体。改动即时生效。
 
-[![Star History Chart](https://api.star-history.com/svg?repos=zkforge/dsh-ccd-style&type=Date)](https://star-history.com/#zkforge/dsh-ccd-style&Date)
+界面默认使用 Geist，未安装时使用系统字体。仓库的 `assets/fonts/` 提供本机安装用字体与 OFL 许可。
 
-## 📄 开源许可证
+## 开发
+
+```sh
+npm ci --cache .cache/npm
+npm run check
+npm run pack:local --cache .cache/npm
+```
+
+代码结构见 [ARCHITECTURE.md](https://github.com/zkforge/dsh-ccd-style/blob/main/ARCHITECTURE.md)。
+
+## 反馈与许可
+
+通过 [Issue](https://github.com/zkforge/dsh-ccd-style/issues) 反馈问题，附上 DSH 版本、窗口尺寸和复现步骤。
 
 [MIT](./LICENSE) © 2026 zkforge。

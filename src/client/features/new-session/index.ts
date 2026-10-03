@@ -11,7 +11,7 @@ import newSessionCss from './new-session.css';
 export const newSessionFeature: ImplementedFeature = {
   id: 'new-session',
   status: 'implemented',
-  task: 'docs/IMPLEMENTATION.md#new-session',
+  task: 'ARCHITECTURE.md#界面模块',
   mount(environment, scope) {
     const probe = probeHost(document);
     if (!probe.conversation) environment.logger.debug('new-session: conversation not mounted yet');

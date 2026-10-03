@@ -7,12 +7,12 @@ import { createStatsSource } from './source.ts';
  * New-session statistics card. DSH sells no cross-session aggregate, so the
  * host half folds the session logs through a projection unit of its own and
  * serves one snapshot on `/api/ccd-stats`; the card renders that snapshot with
- * the reference's own presentation rules. See docs/STATS_RESEARCH.md.
+ * the card's presentation rules.
  */
 export const statisticsFeature: ImplementedFeature = {
   id: 'statistics',
   status: 'implemented',
-  task: 'docs/STATS_RESEARCH.md',
+  task: 'ARCHITECTURE.md#统计数据',
   mount(environment, scope) {
     scope.add(environment.dom.mountStyles(statisticsCss));
     const source = createStatsSource({ logger: environment.logger });

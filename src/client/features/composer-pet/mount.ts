@@ -14,31 +14,9 @@ import css from './pet.css';
 const PET_ORDER = 20;
 
 /**
- * Mount the Composer whale — one small presentation pet, on the new-session
- * page only.
- *
- * DSH marks that page on the conversation root. The pinned
- * `@deepseek-ai/dsh-client-ui-conversation` computes
- * `phase = settling ? "settling" : hero ? "hero" : "active"` with
- * `hero = sessionId === void 0 || (shellPhase === "blank" && (openState ===
- * "open" || summaryBlank === true))`, so `data-phase="hero"` means "no session
- * yet, or one that has never carried a message"; the moment the first message
- * lands the root turns `active`. The pet's seat is measured from exactly that
- * state (`compat/pet-anchor.ts` queries the card under `[data-phase="hero"]`),
- * which is how the whale appears on a new session and disappears from every
- * normal conversation.
- *
- * There is no in-card seat: `conversation.input.overlay` only renders while a
- * Session exists (the pinned InputBar guards it with `sessionId !== void 0`),
- * which is the opposite page. The frame-wide `shell.overlay` is the one seat,
- * placed at the corner the anchor measures from the real card.
- *
- * The whale reads nothing and mirrors nothing: it is a decoration with no
- * business state at all.
- *
- * @param ctx - client context carrying the injected services.
- * @param environment - feature environment for configuration, logging and styles.
- * @param cleanup - scope owning the stylesheet, the registration and the anchor.
+ * Mount the new-session whale in shell.overlay at the measured Composer corner.
+ * pet-anchor selects the DSH conversation root's data-phase=hero state.
+ * @param cleanup - scope owning the styles, slot registration and anchor.
  */
 export function mountComposerPet(ctx: Context, environment: FeatureEnvironment, cleanup: CleanupScope): void {
   cleanup.add(environment.dom.mountStyles(css));

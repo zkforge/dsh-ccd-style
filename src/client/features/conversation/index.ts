@@ -21,7 +21,7 @@ import conversationCss from './conversation.css';
 export const conversationFeature: ImplementedFeature = {
   id: 'conversation',
   status: 'implemented',
-  task: 'docs/IMPLEMENTATION.md#conversation',
+  task: 'ARCHITECTURE.md#界面模块',
   mount(environment, scope) {
     const probe = probeHost(document);
     if (!probe.conversation) environment.logger.debug('conversation: body not mounted yet');

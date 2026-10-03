@@ -1,13 +1,5 @@
-/*
- * CCD design variables. Values were measured from the reference screenshots in
- * docs/reference at @2x and are expressed in logical px at the 1374x871
- * reference window. This is the only stylesheet allowed to carry literal
- * colours; every other rule consumes these variables.
- *
- * Two palettes live here: the measured light one on the root marker, and the
- * dark one under the host's own scheme attribute (see the block below). Values
- * that do not depend on the scheme (geometry, type, masked artwork) stay in the
- * first block; only colours are repeated per scheme.
+/* CCD geometry, type, artwork and light/dark colour variables.
+ * Colours are centralized here; the dark palette follows the host's body marker.
  */
 html[data-dsh-ccd-style="true"] {
   /* Geometry */

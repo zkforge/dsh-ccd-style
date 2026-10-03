@@ -1,24 +1,7 @@
 /**
- * Mount the new-session statistics card.
- *
- * DSH's conversation page renders its greeting, the workspace row and the
- * Composer as one stack in the `hero` phase, and that stack holds the only
- * seats a card could borrow (`conversation.hero.brand.mark` / `.workspace` /
- * `.agent`) — all small chips inside the greeting, none of them a body slot.
- * The card therefore owns its container: it is appended to the hero Composer
- * stack, right after the greeting, and positioned absolutely against it.
- *
- * Measured behaviour of that container (isolated instance, 1382×875, plugin
- * enabled): the stack sits at the bottom of the column, so an in-flow child
- * would land in the Composer area — the greeting itself is absolutely
- * positioned too, which is why the card must share its coordinate system. An
- * appended node survives React re-renders of the page (typing in the editor
- * does not remove it); leaving the hero phase unmounts the stack and the card
- * with it, which is why the observer re-creates it on the way back.
- *
- * The card appears only once {@link StatsSource} has a snapshot: a host
- * without the aggregation (or with the statistics feature off) shows the
- * native page untouched rather than an empty box.
+ * Append the statistics card to the hero Composer stack and position it next
+ * to the greeting. The observer recreates the container after phase changes.
+ * Render when StatsSource supplies the first completed snapshot.
  */
 import type { StatsRangeId, StatsSnapshot } from '../../../shared/stats.ts';
 import type { CleanupScope } from '../../core/cleanup.ts';

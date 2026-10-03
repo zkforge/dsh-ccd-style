@@ -3,27 +3,10 @@ import type { StyleConfig } from '../../shared/config.ts';
 import { BUILT_IN_DARK, BUILT_IN_SURFACES, derivePalette } from './palette.ts';
 
 /**
- * The token layer this plugin stacks over the active theme.
- *
- * `ctx.theme.overrideTokens` accepts any custom-property name — validation only
- * checks that each value is a `{ light, dark }` pair — and the presenter writes
- * every entry onto `document.body` as an inline variable, which is what makes
- * an app-wide colour and typeface reachable from a plugin. The presenter picks
- * the value matching the resolved scheme, so both sides of a pair are always
- * supplied: `body[data-ds-dark-theme]` (the host's own switch) also drives the
- * dark block of `theme/tokens.css`.
- *
- * Two groups travel together:
- * - the host's own semantic tokens (`--dsw-alias-bg-base`,
- *   `--dsw-specific-sidebar-fill`, `--dsw-alias-border-l3`, `--dsw-font-family`,
- *   `--ds-font-family-code`), so the native interface follows the same colours;
- * - the plugin's `--ccd-*` tokens, which every feature stylesheet consumes.
- *
- * The `--ccd-*` group is only emitted for what the user actually configured:
- * unconfigured tokens keep the declarations in `theme/tokens.css` authoritative,
- * so the built-in look is untouched by this layer. A configured background is a
- * light-canvas choice, so the dark side of every pair is the built-in dark
- * palette (`palette.ts`); typefaces are scheme-invariant and repeat.
+ * Compose host semantic tokens and configured --ccd-* overrides as light/dark
+ * pairs. The theme presenter writes the active values onto body. Configured
+ * backgrounds affect light mode; dark mode uses the built-in palette. Font
+ * choices apply to both schemes. Other values come from theme/tokens.css.
  */
 export const THEME_OVERRIDE_SOURCE = 'dsh-ccd-style';
 

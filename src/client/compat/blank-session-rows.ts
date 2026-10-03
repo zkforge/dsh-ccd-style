@@ -2,27 +2,10 @@ import type { BlankSessionsPort, Disposer } from '../contracts/ports.ts';
 import { ANCHOR } from './host-dom.ts';
 
 /**
- * Provisional New Session rows.
- *
- * DSH creates the Session the moment its New Session entry is used and keeps
- * the row in the list until the first message gives it durable history:
- * `SessionSummary.blank` is the host's own fact for that state, and the client
- * contract states the policy — "New Session reuses a blank one targeting the
- * same workspace. Filtering stays with the consumer"
- * (`@deepseek-ai/dsh-api-session-controller`). The Workspace browser shows the
- * selected blank entry; the CCD column keeps the whole provisional row out, so
- * the entry arrives with the first sent message instead of with the click that
- * opened the page.
- *
- * The row is recognised through the host's own stable `data-row-key` anchor
- * (`ui-workspace`'s `SessionNodeItem`, `session:<id>`) and tagged with a plugin
- * attribute the stylesheet hides. Nothing in the host's state or markup is
- * rewritten: the tag is removed as soon as the Session stops being blank, and
- * every remaining tag is removed when the scope is released.
- *
- * Fork children are exempt: a fork is provisionally blank in the client for the
- * moment before the Host summary lands, and that row is real history, not a
- * New Session placeholder.
+ * Hide provisional root sessions using SessionSummary.blank from
+ * dsh-api-session-controller and ui-workspace's data-row-key=session:<id>.
+ * Remove the display marker after the first message or scope release.
+ * Fork children retain their rows while their summaries are settling.
  */
 
 /** Marks one host row the stylesheet keeps out of the column. */

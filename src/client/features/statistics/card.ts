@@ -10,7 +10,7 @@
  * React root to render into and no shared-library dependency to declare.
  *
  * Geometry and colour come from the reference, measured against its own
- * Tailwind classes and the @2x screenshots (see docs/STATS_RESEARCH.md): a
+ * Tailwind classes and the @2x screenshots (see theme/tokens.css): a
  * 20px segmented control with 6px padding, a 160px chart whose bars are 72% of
  * their day column, an 8px legend swatch, and a dark tooltip placed 4px above
  * its anchor. Everything visible is a theme variable (see

@@ -11,25 +11,10 @@ export const VIEW_WIDTH_PROPERTY = '--ccd-view-w';
 export const VIEW_DURATION_PROPERTY = '--ccd-view-duration';
 
 /**
- * The one fact about the Conversation's View switcher a stylesheet cannot work
- * out: which segment is selected, and therefore where the sliding thumb goes.
- *
- * `ui-conversation` renders the switcher itself (`[data-conversation-tabs]`,
- * one `role="tab"` button per registered `conversation.view`) and owns the
- * selection, so the plugin neither reads nor duplicates that state: it restyles
- * the host's own buttons and only measures the selected one. The buttons keep
- * their roles, labels, order and click behaviour — the host still switches the
- * View; this module publishes geometry as custom properties that
- * `features/conversation/conversation.css` prints as the thumb's position.
- *
- * The measurement is kept across element swaps (the header is a session-scoped
- * entry, so switching Sessions rebuilds the tablist) and written synchronously
- * from the observer: an occluded window throttles animation frames, and the
- * thumb has to be in place before the frame is painted.
- *
- * @param document - renderer document carrying the Conversation header.
- * @param report - sink for observer failures; the native tab row stays usable.
- * @returns disposer that disconnects the observer and clears every property.
+ * Measure the selected ui-conversation tab and publish slider geometry.
+ * MutationObserver handles tablist replacement and layout changes synchronously,
+ * including occluded windows where animation frames are throttled.
+ * @returns disposer that clears the observer and published properties.
  */
 export function mountViewSwitch(document: Document, report: (error: unknown) => void): Disposer {
   let scheduled = 0;

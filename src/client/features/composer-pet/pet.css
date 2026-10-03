@@ -1,23 +1,6 @@
-/* Composer whale.
- *
- * One seat, on one page. DSH marks the new-session page on the conversation
- * root (`data-phase="hero"`: no session yet, or one that has never carried a
- * message — the pinned conversation package computes it that way), and
- * `compat/pet-anchor.ts` measures the Composer card under exactly that state.
- * A normal conversation is `active`, so the anchor publishes nothing and the
- * whale is simply not there.
- *
- *  - `.ccd-pet-blank-seat` is drawn from the frame-wide `shell.overlay` at the
- *    corner the anchor measures; that layer is click-through and so is the pet,
- *    so nothing here takes a pointer event.
- * The artwork is the DeepSeek mark's own two inks, from `theme/tokens.css`.
- *
- * The whale is a decoration: it shows nothing but itself, and there is no click
- * reaction.
- *
- * Every rule carries the activation marker, like the other feature sheets: the
- * whale is drawn over the host's Composer, and the host's own element rules for
- * that card are allowed to outrank a bare plugin class. */
+/* New-session whale in shell.overlay, positioned by compat/pet-anchor.ts.
+ * Brand colours come from theme/tokens.css; the decorative seat is click-through.
+ */
 
 html[data-dsh-ccd-style="true"] .ccd-pet-blank-seat {
   position: fixed;
@@ -26,48 +9,25 @@ html[data-dsh-ccd-style="true"] .ccd-pet-blank-seat {
   pointer-events: none;
 }
 
-/* The whale lives in the space above the card's trailing corner, so it stands
-   down as soon as the Composer stack puts another row there: the host's own dock
-   entries and anything else that lands above the card. Two rows are the blank
-   page's own furniture rather than composer rows — the greeting
-   (`.bocITq_root`) and the workspace chips (`.ST7X_W_heroWorkspaceRow`) — and
-   the pet keeps its seat under them, because the chips sit on the left and the
-   whale on the right.
-   The selector reads "a child of the stack that is neither of those two nor the
-   card itself, and that the card follows"; a card appended *below* the Composer
-   (the statistics card does this) is not followed by it and cannot hide the pet.
-   The `:has()` sits on the document root because the seat is drawn from the
-   frame-wide overlay, not from inside the stack.
-   Class sources: `compat/host-dom.ts` (`composerStack`, `heroRoot`,
-   `heroWorkspaceRow`, `composerRoot`), all read from the pinned client bundle. */
+/* Hide when a row precedes Composer, except hero greeting and workspace chips.
+ * The frame-wide seat uses a root :has() query to observe the Composer stack.
+ * Selector sources: compat/host-dom.ts, composerStack/heroRoot/heroWorkspaceRow/composerRoot.
+ */
 html[data-dsh-ccd-style="true"]:has(.ST7X_W_composerStack > :not(.bocITq_root):not(.ST7X_W_heroWorkspaceRow):not(.yhfFVG_root) ~ .yhfFVG_root) .ccd-pet-blank-seat {
   display: none;
 }
 
-/* A message on its way out is drawn as an echoed user bubble at the end of the
-   transcript, which is exactly where the whale sits. It carries the host's own
-   `data-submission-echo` (and `data-pending-steering` for a steering echo) until
-   it is admitted — and the first message of a new session is the one moment the
-   page is still `hero` while a bubble exists, so the whale stands down for it
-   rather than waiting for the phase to flip.
-   Source: `UserStyleBubble` in the installed client bundle. */
+/* Hide during outgoing and steering echoes in the hero phase.
+ * Source: UserStyleBubble's data-submission-echo/data-pending-steering.
+ */
 html[data-dsh-ccd-style="true"]:has([data-submission-echo], [data-pending-steering]) .ccd-pet-blank-seat {
   display: none;
 }
 
-/* The effort popup opens out of the Composer's tool row, and that row is a
-   stacking context: the host gives it `container-type: inline-size`
-   (`yhfFVG_row` in the installed client bundle — the pinned npm package ships
-   the same rule under a `uV2eYG_` prefix), and size containment implies layout
-   containment, which roots a stacking context. The panel's own
-   `z-index` is therefore clamped inside the row — below the frame-wide
-   `shell.overlay` this seat is drawn from (`overlayLayer`, `z-index: 20`) — so
-   the whale would paint over an open panel (measured: the artwork lands on the
-   "Smarter" end of the axis). The decoration stands down while the popup is
-   open rather than the plugin reaching into the host's layer order; the panel
-   is transient and the seat is a mark, not information.
-   Source: `features/model-controls/EffortPanel.tsx` renders `.ccd-effort`, and
-   `.ccd-effort` only exists while the dialog is open. */
+/* Hide while EffortPanel.tsx renders .ccd-effort. Composer's tool row is a
+ * stacking context (ui-conversation/InputBar.module.css, yhfFVG_row), so its
+ * popup appears below the shell overlay containing the whale.
+ */
 html[data-dsh-ccd-style="true"]:has(.ccd-effort) .ccd-pet-blank-seat {
   display: none;
 }

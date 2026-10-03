@@ -108,10 +108,13 @@ for (const file of await list(resolve(root, 'src'))) {
   }
 }
 
-const rootDocs = (await readdir(root, { withFileTypes: true }))
+const rootEntries = await readdir(root, { withFileTypes: true });
+const rootDocs = rootEntries
   .filter(item => item.isFile() && item.name.endsWith('.md'))
   .map(item => item.name);
-const nestedDocs = (await list(resolve(root, 'docs')))
+const docFiles = rootEntries.some(item => item.isDirectory() && item.name === 'docs')
+  ? await list(resolve(root, 'docs')) : [];
+const nestedDocs = docFiles
   .filter(file => file.endsWith('.md')).map(file => normalize(relative(root, file)));
 for (const doc of [...rootDocs, ...nestedDocs]) {
   const source = await readFile(resolve(root, doc), 'utf8');

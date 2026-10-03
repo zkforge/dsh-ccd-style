@@ -11,7 +11,7 @@ import shellCss from './shell.css';
 export const shellFeature: ImplementedFeature = {
   id: 'shell',
   status: 'implemented',
-  task: 'docs/IMPLEMENTATION.md#shell',
+  task: 'ARCHITECTURE.md#界面模块',
   mount(environment, scope) {
     if (!probeHost(document).frame) {
       environment.logger.debug('shell: frame anchor missing; native frame retained');

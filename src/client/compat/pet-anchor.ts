@@ -22,29 +22,10 @@ export const PET_BOX = Object.freeze({ width: 32, height: 24 });
 export const PET_INSET = 12;
 
 /**
- * Measure the new-session Composer card for the pet's only seat.
- *
- * The pet belongs to the new-session page and nowhere else, so this source is
- * also the feature's gate: the selector it queries
- * (`ANCHOR.composerCardHero`) requires `[data-phase="hero"]` on the
- * conversation root, which the pinned conversation package computes as "no
- * session yet, or one that has never carried a message". A normal conversation
- * is `active`, no card matches, and the whale is not drawn at all.
- *
- * This source publishes the card's trailing top corner as the pet's position —
- * viewport coordinates, because the seat is drawn from the frame-fixed
- * `shell.overlay` — and publishes null whenever there is nothing to sit on: no
- * card, an unlaid-out card, or a hidden document.
- *
- * The card is observed rather than assumed: it is rebuilt per phase and
- * resized by the column drag, and this module writes nothing to the host DOM.
- * Installation is guarded like every other compat module's: a document without
- * a body (or without observers) reports once and leaves an inert source, so a
- * frame that is not the pinned one keeps the native UI instead of taking the
- * feature — or the entry — down.
- * @param document - the renderer document to measure.
- * @param report - sink for installation failures.
- * @returns the position source; every observer and listener is released by `dispose`.
+ * Publish the top trailing corner of ANCHOR.composerCardHero in viewport
+ * coordinates for shell.overlay. The DSH conversation root's data-phase=hero
+ * selects new sessions; hidden, missing or unlaid-out cards publish null.
+ * @returns position source whose dispose releases all listeners and observers.
  */
 export function createPetAnchor(document: Document, report: (error: unknown) => void): PetAnchorSource {
   const listeners = new Set<() => void>();

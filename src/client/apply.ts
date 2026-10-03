@@ -119,9 +119,7 @@ export function apply(ctx: Context): void {
         if (next.features.conversation || next.features['new-session']) {
           mountModelControls(ctx, environment, scope);
         }
-        /* The whale occupies the Composer's own overlay seats, so it is mounted
-           from here like the other slot registrations: the seat names span both
-           pages, and a feature module may not import a sibling. */
+        /* Compose the frame-wide pet seat alongside the page features. */
         if (next.features['composer-pet']) {
           mountComposerPet(ctx, environment, scope);
         }

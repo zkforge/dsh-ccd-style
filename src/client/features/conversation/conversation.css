@@ -341,18 +341,9 @@ html[data-dsh-ccd-style="true"] .icaHSq_scroll {
   padding-bottom: 8px;
 }
 
-/*
- * Jump-to-bottom control. The host parks it in the Composer's trailing corner —
- * `toBottomSlot` is a zero-height flex row right-aligned with the content
- * gutter, and the button is lifted off that line by its own negative margin
- * (`@deepseek-ai/dsh-client-ui-chat`'s `ChatView.module.css`, pinned as
- * `HOST.chatViewToBottomSlot`／`HOST.chatViewToBottom`) — which is the corner the
- * Composer whale occupies, so the two marks sat on top of each other. The
- * reference keeps the same affordance in the middle of the column and a step
- * smaller; this moves the slot's alignment and resizes the button's box, and
- * nothing else: the host keeps the button, its chevron, its label, its callback
- * and its floating surface, and the negative margin follows the box so the gap
- * above the Composer stays the host's own.
+/* Center and size the host's jump-to-bottom control.
+ * Source: ui-chat/ChatView.module.css, HOST.chatViewToBottomSlot/toBottom.
+ * Negative margin follows the button size to retain its gap above Composer.
  */
 html[data-dsh-ccd-style="true"] .icaHSq_toBottomSlot {
   justify-content: center;
@@ -365,34 +356,10 @@ html[data-dsh-ccd-style="true"] .icaHSq_toBottom {
   margin-top: calc(-1 * var(--ccd-to-bottom-size));
 }
 
-/*
- * Transcript edge fade. The host's internal-request viewer softens the edges
- * of its scroll viewport with a 24px stencil and switches each side on only
- * while that side still holds content; the transcript itself has never had it.
- * `compat/conversation-fade.ts` publishes those two facts as attributes on the
- * scroller, and these rules paint the stencil from them.
- *
- * It is painted, not masked. The resident Composer is a *child* of the scroll
- * viewport (a sticky seat inside it), so `mask-image` on the scroller would
- * erase the Composer together with the transcript — the whole input card
- * vanishes as soon as either edge fades. Two canvas-coloured overlays on the
- * page body instead sit above the transcript and below the Composer's own
- * `z-index: 7`. The page body is the box between the header and the window
- * edge, so both overlays stay in the viewport while the transcript scrolls
- * under them.
- *
- * The bottom overlay covers the Composer's *whole* footprint, not a 24px strip:
- * below the Composer's top edge the transcript must not show at all. Content
- * that reaches there paints through the translucent surfaces the InputBar
- * stacks above its card — a plan or tasks row in `conversation.input.dock`, for
- * one — which reads as ghosted text inside the panel. The overlay is canvas
- * coloured and sits under those surfaces, so they render clean, and only its
- * leading `--ccd-edge-fade` px stay a ramp, which is the fade itself.
- * `--ccd-fade-bottom-inset` (published by `compat/conversation-fade.ts`) is how
- * far the Composer reaches up from the bottom of the page body.
- *
- * `to bottom`/`to top` over `--ccd-canvas` leaves the canvas colour and only
- * drops its alpha, so the fade never tints the text grey.
+/* Paint edge gradients on the page body above the transcript and below
+ * sticky Composer. conversation-fade.ts publishes scroll flags and the bottom
+ * inset; the lower overlay covers Composer's full footprint. Since Composer
+ * is inside the scroller, the gradient belongs on this separate layer.
  */
 html[data-dsh-ccd-style="true"] .ST7X_W_body::before,
 html[data-dsh-ccd-style="true"] .ST7X_W_body::after {

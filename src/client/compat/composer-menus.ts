@@ -35,32 +35,11 @@ interface Placement {
 }
 
 /**
- * The Composer sits on the window's bottom edge in the CCD layout, and the
- * blank-session chips row sits directly above it. Both feed menus that the
- * `Menu` primitive opens *below* their anchor — the spot DSH itself reserves
- * for a menu on a screen with room under the control. With the anchor this
- * close to the bottom edge there is no such room, so the primitive's viewport
- * fit (`y = min(max(y, overlayTop), vh - height - 12)`) lifts the card back up
- * until it covers the control that opened it, and on a short window it covers
- * the Composer as well. The reference opens these menus upwards instead.
- *
- * This re-places only the menus that would overlap their own anchor, using the
- * same geometry the primitive uses for its `side: "top"` case. Only a card
- * taller than the room above its anchor is capped, and then the free space
- * itself becomes its ceiling — the primitive's own `.scrollable` viewport
- * scrolls the rows, so the card still sits flush against the control instead of
- * swallowing the page. A card that fits keeps its own height: a ceiling equal to
- * the measured height clips the moment the card grows, and cards do grow after
- * they were measured — this plugin's account-menu stylesheet draws its header on
- * a later pass, and a picker's rows arrive after the card is on screen. The host
- * rewrites the inline `top` every frame, so the correction is re-applied from
- * the observer rather than once, and a window resize is handled directly because
- * the primitive's own tracker is a throttled animation frame; a menu that
- * already fits below is left alone.
- *
- * @param document - renderer document carrying the portal.
- * @param report - sink for observer failures; the native placement stays.
- * @returns disposer that disconnects the observer and restores every menu.
+ * Place bottom-edge Composer and hero-chip menus above their anchors, using
+ * the Menu primitive's side=top geometry. Cap only cards taller than the free
+ * space above the anchor so later content growth keeps its natural height.
+ * MutationObserver and resize reapply placement when the host updates it.
+ * @returns disposer that restores each menu and releases the observers.
  */
 export function mountComposerMenuPlacement(document: Document, report: (error: unknown) => void): Disposer {
   const placed = new Map<HTMLElement, Placement>();

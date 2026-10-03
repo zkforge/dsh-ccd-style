@@ -1,25 +1,9 @@
 /**
- * The `ccdUsage` projection unit: the session-log fold behind the statistics
- * card.
- *
- * It is a pure fold over committed session events (the host's session
- * projection seam drives it), so incremental folding, the live watermark
- * cache, durable checkpoints and cold reads all stay the host's business —
- * this file owns only the computation. Two facts decide most of it:
- *
- * - **A fork's inherited prefix is not this session's work.** `init` receives
- *   the exact inherited event count, and every inherited event is skipped, so
- *   a fork child contributes only what ran in it and a parent's history is
- *   never counted twice.
- * - **`assistant/message` carries no model.** Each assembled message is
- *   attributed to the model of the latest `request/header` before it, which is
- *   how the host's own `modelSelection` projection reconstructs the route.
- *
- * Token accounting follows the host's own `normalizeUsage`: the adapter's
- * `totalTokens` when it reported one, otherwise the sum of its counters.
- * `reasoningTokens` is a subset of `outputTokens` and is never added. The
- * reference's `Models` view also prints lifetime input and output counters per
- * model, so both raw counters are kept beside the cache-inclusive total.
+ * Pure `ccdUsage` fold over committed session events. The host owns watermarks
+ * and checkpoints. Skip the inherited prefix of forks, attribute messages to
+ * the latest request/header model, and use normalizeUsage token accounting:
+ * reasoning is part of output, while cache-inclusive totals and raw in/out
+ * counters are retained for the Models view.
  */
 import type { TokenUsage } from '@deepseek-ai/dsh-llm';
 import type { SessionEvent, SessionHeader, SessionLogOffset } from '@deepseek-ai/dsh-session';

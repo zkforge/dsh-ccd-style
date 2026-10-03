@@ -20,7 +20,7 @@ import sidebarCss from './sidebar.css';
 export const sidebarFeature: ImplementedFeature = {
   id: 'sidebar',
   status: 'implemented',
-  task: 'docs/IMPLEMENTATION.md#sidebar',
+  task: 'ARCHITECTURE.md#界面模块',
   mount(environment, scope) {
     /* The stylesheets are inert until the host renders the column, so they are
        mounted unconditionally: a feature enabled while another panel is on
