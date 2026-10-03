@@ -14,3 +14,10 @@ npm run check:package
 npm run check
 npm run pack:local --cache .cache/npm
 ```
+
+DSH 换了构建后，宿主 CSS Module 类名会重新哈希，用下面的命令从新构建的 `app.asar` 重解前缀表（不带 `--write` 只打印）：
+
+```sh
+node scripts/host-prefixes.mjs --windows <app.asar> --write
+node scripts/host-prefixes.mjs --pinned <macOS app.asar> --windows <Windows app.asar> --write
+```
