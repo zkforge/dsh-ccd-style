@@ -1,5 +1,5 @@
 import type { Disposer } from '../contracts/ports.ts';
-import { HOST } from './host-dom.ts';
+import { hostSelectors } from './host-dom.ts';
 
 /** Marks the portalled account menu for the stylesheet. */
 export const ACCOUNT_MENU_ATTRIBUTE = 'data-ccd-account-menu';
@@ -24,6 +24,7 @@ export const ACCOUNT_NAME_PROPERTY = '--ccd-account-name';
  * @returns disposer that disconnects the observers and clears every mark.
  */
 export function mountAccountMenu(document: Document, report: (error: unknown) => void): Disposer {
+  const host = hostSelectors(document);
   const marked = new Set<HTMLElement>();
   let trigger: HTMLElement | null = null;
   let scheduled = 0;
@@ -44,11 +45,11 @@ export function mountAccountMenu(document: Document, report: (error: unknown) =>
       return;
     }
     let target: HTMLElement | null = null;
-    for (const candidate of document.querySelectorAll<HTMLElement>(HOST.menu)) {
+    for (const candidate of document.querySelectorAll<HTMLElement>(host.menu)) {
       if (getComputedStyle(candidate).position === 'fixed') target = candidate;
     }
     if (target === null) return;
-    const name = trigger?.querySelector(HOST.accountLabel)?.textContent?.trim() ?? '';
+    const name = trigger?.querySelector(host.accountLabel)?.textContent?.trim() ?? '';
     target.setAttribute(ACCOUNT_MENU_ATTRIBUTE, '');
     /* A quoted CSS string, so a name with spaces or quotes stays one token. */
     target.style.setProperty(ACCOUNT_NAME_PROPERTY, JSON.stringify(name));
@@ -72,7 +73,7 @@ export function mountAccountMenu(document: Document, report: (error: unknown) =>
   let attached: HTMLElement | null = null;
   try {
     tree = new MutationObserver(() => {
-      const found = document.querySelector<HTMLElement>(HOST.accountTrigger);
+      const found = document.querySelector<HTMLElement>(host.accountTrigger);
       if (found !== attached) {
         attributes?.disconnect();
         attached = found;
@@ -85,7 +86,7 @@ export function mountAccountMenu(document: Document, report: (error: unknown) =>
       schedule();
     });
     tree.observe(document.body, { childList: true, subtree: true });
-    const initial = document.querySelector<HTMLElement>(HOST.accountTrigger);
+    const initial = document.querySelector<HTMLElement>(host.accountTrigger);
     if (initial !== null) {
       attached = initial;
       trigger = initial;

@@ -1,5 +1,6 @@
 import type { DomPort } from '../contracts/ports.ts';
 import { PLUGIN_ID, ROOT_ATTRIBUTE } from '../../shared/identity.ts';
+import { aliasHostClasses, detectHostBuild } from './host-builds.ts';
 
 interface RootLease { count: number; readonly previous: string | null }
 const leases = new WeakMap<Element, RootLease>();
@@ -31,7 +32,9 @@ export function createDomPort(document: Document): DomPort {
     mountStyles(css) {
       const style = document.createElement('style');
       style.dataset.plugin = PLUGIN_ID;
-      style.textContent = css;
+      /* Stylesheets are authored with the pinned build's class names; the
+         document on screen may run another build of the same DSH version. */
+      style.textContent = aliasHostClasses(css, detectHostBuild(document));
       document.head.appendChild(style);
       return () => style.remove();
     },

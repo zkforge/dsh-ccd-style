@@ -1,5 +1,5 @@
 import type { Disposer } from '../contracts/ports.ts';
-import { HOST } from './host-dom.ts';
+import { HOST, hostSelectors } from './host-dom.ts';
 
 /** Marks a menu this module has already placed above its anchor. */
 export const FLIPPED_MENU_ATTRIBUTE = 'data-ccd-menu-flipped';
@@ -42,6 +42,7 @@ interface Placement {
  * @returns disposer that restores each menu and releases the observers.
  */
 export function mountComposerMenuPlacement(document: Document, report: (error: unknown) => void): Disposer {
+  const host = hostSelectors(document);
   const placed = new Map<HTMLElement, Placement>();
   const measured = new Map<HTMLElement, Measurement>();
   let scheduled = 0;
@@ -53,10 +54,10 @@ export function mountComposerMenuPlacement(document: Document, report: (error: u
    */
   const anchorOf = (): HTMLElement | null => {
     const expanded = '[aria-expanded="true"]';
-    return document.querySelector<HTMLElement>(`${HOST.heroWorkspaceRow} ${expanded}`)
-      ?? document.querySelector<HTMLElement>(`${HOST.heroWorkspaceChip}${expanded}`)
-      ?? document.querySelector<HTMLElement>(`${HOST.composerCard} ${expanded}`)
-      ?? document.querySelector<HTMLElement>(`${HOST.accountTrigger}${expanded}`);
+    return document.querySelector<HTMLElement>(`${host.heroWorkspaceRow} ${expanded}`)
+      ?? document.querySelector<HTMLElement>(`${host.heroWorkspaceChip}${expanded}`)
+      ?? document.querySelector<HTMLElement>(`${host.composerCard} ${expanded}`)
+      ?? document.querySelector<HTMLElement>(`${host.accountTrigger}${expanded}`);
   };
 
   /**
@@ -154,7 +155,7 @@ export function mountComposerMenuPlacement(document: Document, report: (error: u
     const visited = new Set<HTMLElement>();
     if (anchor !== null) {
       const anchorRect = anchor.getBoundingClientRect();
-      for (const menu of document.querySelectorAll<HTMLElement>(HOST.menu)) {
+      for (const menu of document.querySelectorAll<HTMLElement>(host.menu)) {
         if (getComputedStyle(menu).position !== 'fixed') continue;
         visited.add(menu);
         place(menu, anchorRect, window.innerHeight);

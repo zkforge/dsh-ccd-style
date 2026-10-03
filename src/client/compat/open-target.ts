@@ -1,6 +1,6 @@
 import type { Disposer } from '../contracts/ports.ts';
 import { headerLabels } from './header-labels.ts';
-import { HOST } from './host-dom.ts';
+import { hostSelectors } from './host-dom.ts';
 
 /** Attribute this module writes onto the host anchor; removed again on release. */
 const MODE_ATTRIBUTE = 'data-ccd-open-mode';
@@ -23,6 +23,7 @@ interface Annotation {
  * @returns disposer that restores attributes and markers.
  */
 export function mountOpenTargetMode(document: Document, report: (error: unknown) => void): Disposer {
+  const host = hostSelectors(document);
   /** Anchors carrying the mode marker, including the ones with no annotation. */
   const marked = new Set<HTMLElement>();
   const annotations = new Map<HTMLElement, Annotation>();
@@ -49,9 +50,9 @@ export function mountOpenTargetMode(document: Document, report: (error: unknown)
   const sync = () => {
     const copy = headerLabels(document);
     for (const anchor of document.querySelectorAll<HTMLElement>(
-      `${HOST.conversationHeader} ${HOST.openTargetAnchor}`,
+      `${host.conversationHeader} ${host.openTargetAnchor}`,
     )) {
-      const chevron = anchor.querySelector<HTMLElement>(HOST.openTargetChevron);
+      const chevron = anchor.querySelector<HTMLElement>(host.openTargetChevron);
       const previous = annotations.get(anchor);
       marked.add(anchor);
       if (chevron === null) {
@@ -71,7 +72,7 @@ export function mountOpenTargetMode(document: Document, report: (error: unknown)
         if (chevron.getAttribute('title') !== copy.open) chevron.setAttribute('title', copy.open);
         continue;
       }
-      const main = anchor.querySelector<HTMLElement>(HOST.openTargetMain);
+      const main = anchor.querySelector<HTMLElement>(host.openTargetMain);
       annotations.set(anchor, {
         chevron,
         main,

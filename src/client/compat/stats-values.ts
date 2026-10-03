@@ -1,5 +1,5 @@
 import type { Disposer } from '../contracts/ports.ts';
-import { HOST } from './host-dom.ts';
+import { hostSelectors } from './host-dom.ts';
 
 /** Short readout mirrored from native text for wide columns only. */
 export const STAT_VALUE_PROPERTY = '--ccd-stat-value';
@@ -24,14 +24,15 @@ export const CLUSTER_GAP_PROPERTY = '--ccd-cluster-gap';
  * @returns disposer that disconnects the observers and clears every property.
  */
 export function mountComposerStats(document: Document, report: (error: unknown) => void): Disposer {
+  const host = hostSelectors(document);
   let scheduled = 0;
   let trailing: HTMLElement | null = null;
   let root: HTMLElement | null = null;
 
   const sync = () => {
     scheduled = 0;
-    for (const pill of document.querySelectorAll<HTMLElement>(HOST.statsPill)) {
-      const parts = (pill.querySelector(HOST.statsLabel)?.textContent ?? '')
+    for (const pill of document.querySelectorAll<HTMLElement>(host.statsPill)) {
+      const parts = (pill.querySelector(host.statsLabel)?.textContent ?? '')
         .split('·').map(part => part.trim()).filter(Boolean);
       /* The speed readout carries a slash; the usage pill's second segment is
          the cache-hit share the host already prints next to its total
@@ -48,18 +49,18 @@ export function mountComposerStats(document: Document, report: (error: unknown) 
     /* The last measurement is kept across element swaps: the Composer is rebuilt
        when the page changes phase, and clearing the property there would drop the
        statistics cluster back onto the model selector for a frame. */
-    const nextRoot = document.querySelector<HTMLElement>(HOST.composerRoot);
+    const nextRoot = document.querySelector<HTMLElement>(host.composerRoot);
     if (nextRoot !== null) root = nextRoot;
-    const nextTrailing = document.querySelector<HTMLElement>(`${HOST.composerRow} ${HOST.composerTrailing}`);
+    const nextTrailing = document.querySelector<HTMLElement>(`${host.composerRow} ${host.composerTrailing}`);
     if (nextTrailing !== null) trailing = nextTrailing;
     if (root !== null && trailing !== null && trailing.isConnected) {
       const width = `${Math.round(trailing.getBoundingClientRect().width)}px`;
       if (root.style.getPropertyValue(TRAILING_WIDTH_PROPERTY) !== width) {
         root.style.setProperty(TRAILING_WIDTH_PROPERTY, width);
       }
-      const row = document.querySelector<HTMLElement>(HOST.composerRow);
-      const dock = root.querySelector<HTMLElement>(HOST.composerDock);
-      const model = trailing.querySelector<HTMLElement>(HOST.modelSelectTrigger);
+      const row = document.querySelector<HTMLElement>(host.composerRow);
+      const dock = root.querySelector<HTMLElement>(host.composerDock);
+      const model = trailing.querySelector<HTMLElement>(host.modelSelectTrigger);
       if (row !== null && dock !== null && model !== null) {
         const style = getComputedStyle(row);
         const available = row.getBoundingClientRect().width - parseFloat(style.paddingLeft) - parseFloat(style.paddingRight);
@@ -115,7 +116,7 @@ export function mountComposerStats(document: Document, report: (error: unknown) 
     window.removeEventListener('resize', schedule);
     root?.style.removeProperty(TRAILING_WIDTH_PROPERTY);
     root?.style.removeProperty(MODEL_MAX_WIDTH_PROPERTY);
-    for (const pill of document.querySelectorAll<HTMLElement>(HOST.statsPill)) {
+    for (const pill of document.querySelectorAll<HTMLElement>(host.statsPill)) {
       pill.style.removeProperty(STAT_VALUE_PROPERTY);
     }
     root = null;

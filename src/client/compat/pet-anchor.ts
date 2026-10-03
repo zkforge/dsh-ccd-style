@@ -1,4 +1,4 @@
-import { ANCHOR } from './host-dom.ts';
+import { hostAnchors } from './host-dom.ts';
 import type { Disposer } from '../contracts/ports.ts';
 
 /** Where the frame-wide seat is drawn, in viewport coordinates. */
@@ -22,12 +22,13 @@ export const PET_BOX = Object.freeze({ width: 32, height: 24 });
 export const PET_INSET = 12;
 
 /**
- * Publish the top trailing corner of ANCHOR.composerCardHero in viewport
+ * Publish the top trailing corner of the hero Composer card in viewport
  * coordinates for shell.overlay. The DSH conversation root's data-phase=hero
  * selects new sessions; hidden, missing or unlaid-out cards publish null.
  * @returns position source whose dispose releases all listeners and observers.
  */
 export function createPetAnchor(document: Document, report: (error: unknown) => void): PetAnchorSource {
+  const anchors = hostAnchors(document);
   const listeners = new Set<() => void>();
   let value: PetAnchor | null = null;
   let card: HTMLElement | null = null;
@@ -42,7 +43,7 @@ export function createPetAnchor(document: Document, report: (error: unknown) => 
 
   const sync = () => {
     if (released) return;
-    const next = document.querySelector<HTMLElement>(ANCHOR.composerCardHero);
+    const next = document.querySelector<HTMLElement>(anchors.composerCardHero);
     if (next !== card) {
       if (card !== null) size?.disconnect();
       card = next;

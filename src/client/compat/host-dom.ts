@@ -1,3 +1,5 @@
+import { aliasHostClasses, detectHostBuild, type HostBuild } from './host-builds.ts';
+
 /**
  * Version-pinned host DOM facts.
  *
@@ -6,6 +8,11 @@
  * packages. DSH hashes CSS-module class names per build, so these are the one
  * place that may need updating for another DSH release; nothing outside this
  * module may hard-code a host class name.
+ *
+ * The names below are the macOS build's. `host-builds.ts` holds the same
+ * classes as the Windows build spells them, and `hostSelectors` /
+ * `hostAnchors` resolve this table for the document actually on screen, so
+ * callers never branch on the platform themselves.
  *
  * Sources (app.asar, `0.2.0-rc.2`):
  * - `packages/client/ui-layout/src/client/AppFrame.module.css` (`_6Qf49G_`)
@@ -191,6 +198,47 @@ export const ANCHOR = Object.freeze({
    */
   composerCardHero: `${HOST.conversationRoot}[data-phase="hero"] [data-composer-card]`,
 } as const);
+
+/** One document's selector table, resolved for the build that document runs. */
+export type HostSelectors = Readonly<Record<keyof typeof HOST, string>>;
+
+/** One document's anchor table, resolved for the build that document runs. */
+export type HostAnchors = Readonly<Record<keyof typeof ANCHOR, string>>;
+
+const selectorTables = new Map<string, HostSelectors>();
+const anchorTables = new Map<string, HostAnchors>();
+
+/** Rewrite every value of one table once per build, then reuse it. */
+function resolveTable<T extends Record<string, string>>(
+  table: T,
+  build: HostBuild,
+  cache: Map<string, T>,
+): T {
+  const known = cache.get(build.id);
+  if (known !== undefined) return known;
+  const resolved = Object.freeze(Object.fromEntries(
+    Object.entries(table).map(([key, value]) => [key, aliasHostClasses(value, build)]),
+  )) as unknown as T;
+  cache.set(build.id, resolved);
+  return resolved;
+}
+
+/**
+ * The selectors this document's build actually answers to.
+ *
+ * `HOST` above is written against the authored build; a document running
+ * another build needs the same selectors in that build's class names. Read this
+ * once per mount and use the table, rather than mixing the two.
+ * @param document - the renderer document to speak to.
+ */
+export function hostSelectors(document: Document): HostSelectors {
+  return resolveTable(HOST, detectHostBuild(document), selectorTables);
+}
+
+/** The anchors of this document's build; see {@link hostSelectors}. */
+export function hostAnchors(document: Document): HostAnchors {
+  return resolveTable(ANCHOR, detectHostBuild(document), anchorTables);
+}
 
 export interface HostProbe {
   readonly frame: boolean;

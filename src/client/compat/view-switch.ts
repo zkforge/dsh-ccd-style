@@ -1,5 +1,5 @@
 import type { Disposer } from '../contracts/ports.ts';
-import { HOST } from './host-dom.ts';
+import { hostSelectors } from './host-dom.ts';
 
 /** Custom property carrying the active View segment's offset inside the tablist. */
 export const VIEW_OFFSET_PROPERTY = '--ccd-view-x';
@@ -17,19 +17,20 @@ export const VIEW_DURATION_PROPERTY = '--ccd-view-duration';
  * @returns disposer that clears the observer and published properties.
  */
 export function mountViewSwitch(document: Document, report: (error: unknown) => void): Disposer {
+  const host = hostSelectors(document);
   let scheduled = 0;
   let tabs: HTMLElement | null = null;
   let selected: HTMLElement | null = null;
 
   const sync = () => {
     scheduled = 0;
-    const next = document.querySelector<HTMLElement>(HOST.conversationTabs);
+    const next = document.querySelector<HTMLElement>(host.conversationTabs);
     if (next !== null && next !== tabs) {
       tabs = next;
       selected = null;
     }
     if (tabs === null || !tabs.isConnected) return;
-    const active = tabs.querySelector<HTMLElement>(HOST.conversationTabActive);
+    const active = tabs.querySelector<HTMLElement>(host.conversationTabActive);
     if (active === null) return;
     /* Measured against the tablist rather than `offsetLeft`, so the value stays
        right whatever the buttons' offset parent turns out to be. */

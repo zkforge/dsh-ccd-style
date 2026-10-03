@@ -1,5 +1,5 @@
 import type { Disposer } from '../contracts/ports.ts';
-import { ANCHOR, HOST } from './host-dom.ts';
+import { ANCHOR, hostSelectors } from './host-dom.ts';
 
 /** Marks that the transcript still has content above the scroll viewport. */
 export const FADE_TOP_ATTRIBUTE = 'data-ccd-fade-top';
@@ -53,6 +53,7 @@ export function edgeFadeState(scrollTop: number, scrollHeight: number, clientHei
  * @returns disposer that disconnects every observer and clears both attributes.
  */
 export function mountConversationFade(document: Document, report: (error: unknown) => void): Disposer {
+  const host = hostSelectors(document);
   let scroller: HTMLElement | null = null;
   let page: HTMLElement | null = null;
   let scheduled = 0;
@@ -65,7 +66,7 @@ export function mountConversationFade(document: Document, report: (error: unknow
     /* The Composer is a child of the scroller, so nothing may be masked here
        without masking it too: the stylesheet paints the stencil as two overlays
        on the page body, and the body's own `::after` reads this property. */
-    const next = document.querySelector<HTMLElement>(HOST.conversationBody);
+    const next = document.querySelector<HTMLElement>(host.conversationBody);
     if (next !== page) {
       if (page !== null) page.style.removeProperty(FADE_BOTTOM_INSET_PROPERTY);
       page = next;

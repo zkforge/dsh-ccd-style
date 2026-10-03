@@ -6,7 +6,7 @@
 import type { StatsRangeId, StatsSnapshot } from '../../../shared/stats.ts';
 import type { CleanupScope } from '../../core/cleanup.ts';
 import type { Logger } from '../../contracts/ports.ts';
-import { HOST } from '../../compat/host-dom.ts';
+import { hostSelectors } from '../../compat/host-dom.ts';
 import { createStatsCard, type StatsCard } from './card.ts';
 import type { StatsSource } from './source.ts';
 import { buildCardData, INITIAL_STATS_VIEW, type StatsViewState } from './view.ts';
@@ -45,6 +45,7 @@ export function mountStatisticsCard(
   source: StatsSource,
 ): void {
   const random = stableRandom();
+  const selectors = hostSelectors(document);
   let snapshot: StatsSnapshot | null = source.current;
   let view: StatsViewState = INITIAL_STATS_VIEW;
   let rendered: { snapshot: StatsSnapshot; view: StatsViewState } | null = null;
@@ -62,14 +63,14 @@ export function mountStatisticsCard(
      greeting's own top plus its height plus the gap. */
   const measure = () => {
     if (card === null) return;
-    const greeting = document.querySelector<HTMLElement>(`${HERO} ${HOST.heroRoot}`);
+    const greeting = document.querySelector<HTMLElement>(`${HERO} ${selectors.heroRoot}`);
     if (greeting !== null) card.element.style.setProperty(GAP_PROPERTY, `${greeting.offsetHeight + GAP_PX}px`);
     card.layout();
   };
 
   const sync = () => {
     const hero = document.querySelector<HTMLElement>(HERO);
-    const stack = hero?.querySelector<HTMLElement>(HOST.heroComposerStack) ?? null;
+    const stack = hero?.querySelector<HTMLElement>(selectors.heroComposerStack) ?? null;
     if (stack === null || snapshot === null) {
       remove();
       return;

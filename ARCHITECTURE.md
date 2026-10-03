@@ -48,6 +48,10 @@ Host `Config` 的 `.volatile()` 字段通过 DSH 设置服务投影到 `configFo
 
 版本相关选择器集中在 `compat/host-dom.ts`。各适配模块量测宿主布局并发布属性或 CSS 变量，框架列宽和界面业务仍由宿主持有。
 
+平台差异由宿主属性分流：`data-platform="darwin"` 只标记 macOS，交通灯与折叠侧栏的窗口控件几何都限制在该作用域内；Windows 由 `data-windows-titlebar` 标记，宿主在窗口上方另加 40px 标题栏条带，侧栏开关、原生「应用／编辑」菜单和窗口按钮都在其中，插件只让该条带沿用配置的侧栏配色，不移动其中的控件。
+
+同一版本号的 macOS 与 Windows 安装包是两次不同构建（`0.2.0-rc.2` 分别是 commit `5e9e301d` 与 `04f392c9`），宿主 CSS Module 的类名前缀在两者间不同。`compat/host-builds.ts` 保存两套前缀表，`dom.mountStyles` 在挂载样式前改写类名，`hostSelectors`/`hostAnchors` 按当前构建解析选择器表，因此样式表与适配代码都只写一套类名。
+
 ## 统计数据
 
 Host 注册 `ccdUsage` 会话投影单元，折叠提示数与输入、输出、缓存用量，按天、小时和模型聚合。水位与 durable 检查点由宿主的 `sessionProjectionCache` 管理；缺失数据在后台补齐。

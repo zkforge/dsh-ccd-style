@@ -35,3 +35,15 @@ html[data-dsh-ccd-style="true"] ._6Qf49G_rightbarCol {
 html[data-dsh-ccd-style="true"] ._6Qf49G_frame {
   background: var(--ccd-sidebar);
 }
+
+/* Windows adds a 40px caption strip above the frame: the sidebar toggle, the
+   native 「应用」/「编辑」caption menus and the window controls live in it. The
+   host fills it from `--dsw-specific-sidebar-fill`, which this plugin already
+   replaces with the configured sidebar colour, so the strip follows the column
+   today; pinning it to the plugin's own surface token keeps the whole window
+   chrome on one source instead of a host token that may be repainted
+   elsewhere. The controls inside the strip keep their host geometry — only the
+   background is claimed here. */
+html[data-dsh-ccd-style="true"][data-windows-titlebar] ._6Qf49G_frame:before {
+  background: var(--ccd-sidebar);
+}

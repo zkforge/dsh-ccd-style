@@ -1,5 +1,5 @@
 import type { Disposer } from '../contracts/ports.ts';
-import { HOST } from './host-dom.ts';
+import { hostSelectors } from './host-dom.ts';
 
 /* DSH 0.2.0-rc.2 ui-conversation/locales: placeholder.hero → placeholder.default.
    Match only the shipped default hero copy; workspace, blocked and command
@@ -11,6 +11,7 @@ const DEFAULT_COPY = new Map([
 
 /** Unify the default hero hint with chat, preserving the official editor. */
 export function mountComposerPlaceholder(document: Document, report: (error: unknown) => void): Disposer {
+  const host = hostSelectors(document);
   let active: { input: HTMLElement; node: ChildNode | null; from: string; to: string; aria: boolean } | null = null;
   const release = () => {
     if (active === null) return;
@@ -21,15 +22,15 @@ export function mountComposerPlaceholder(document: Document, report: (error: unk
     active = null;
   };
   const sync = () => {
-    const hero = `${HOST.conversationRoot}[data-phase="hero"]`;
-    const input = document.querySelector<HTMLElement>(`${hero} ${HOST.composerInput}`);
+    const hero = `${host.conversationRoot}[data-phase="hero"]`;
+    const input = document.querySelector<HTMLElement>(`${hero} ${host.composerInput}`);
     const from = input?.getAttribute('data-placeholder') ?? '';
     const to = DEFAULT_COPY.get(from);
     if (active !== null && (active.input !== input || active.from !== from)) release();
     if (input === null || to === undefined) return;
     active ??= { input, node: null, from, to, aria: false };
     /* Change an existing text node in place, never replace React's children. */
-    const node = document.querySelector(`${hero} ${HOST.composerPlaceholder}`)?.firstChild ?? null;
+    const node = document.querySelector(`${hero} ${host.composerPlaceholder}`)?.firstChild ?? null;
     if (node?.nodeType === 3 && node.nodeValue === from) {
       node.nodeValue = to;
       active.node = node;
