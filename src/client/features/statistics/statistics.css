@@ -1,6 +1,6 @@
 /*
  * New-session statistics card. Numbers come from the reference card's own
- * values (Tailwind classes) cross-checked against the @2x screenshot; see
+ * values (Tailwind classes) cross-checked against its @2x screenshots; see
  * docs/STATS_RESEARCH.md. Colours are theme variables only.
  *
  * The card is absolutely positioned under the host's greeting: the hero
@@ -10,6 +10,9 @@
  * moves the card with it. Horizontally the card starts at the Composer card's
  * left edge — the reference gives the title, the card and the input card one
  * shared left edge instead of centring them.
+ *
+ * Geometry below is the reference's own, at its own scale: a 20px segmented
+ * control, 44px tiles, a 160px chart, 72%-wide bars and an 8px legend swatch.
  */
 
 html[data-dsh-ccd-style="true"] [data-ccd-stats-card] {
@@ -20,10 +23,9 @@ html[data-dsh-ccd-style="true"] [data-ccd-stats-card] {
   box-sizing: border-box;
   display: flex;
   flex-direction: column;
-  /* Header to body. Together with the 8px padding above it and the 24px header
+  /* Header to body. Together with the 8px padding above it and the 20px header
      this puts the first tile row ~40px below the card's top edge, which is the
-     proportion the reference shows. Tiles and heatmap stay 6px apart inside the
-     body, and the footer sentence rides the same 6px group. */
+     proportion the reference shows. */
   gap: 8px;
   width: min(480px, calc(100% - 32px));
   padding: 8px 12px 12px;
@@ -34,7 +36,7 @@ html[data-dsh-ccd-style="true"] [data-ccd-stats-card] {
   pointer-events: auto;
 }
 
-/* Header: the reference's segmented control, here just its active tab. */
+/* Header: the reference's two segmented controls, pushed apart by a spacer. */
 html[data-dsh-ccd-style="true"] [data-ccd-stats-card] .ccd-stats-header {
   display: flex;
   align-items: center;
@@ -42,24 +44,52 @@ html[data-dsh-ccd-style="true"] [data-ccd-stats-card] .ccd-stats-header {
   min-width: 0;
 }
 
-html[data-dsh-ccd-style="true"] [data-ccd-stats-card] .ccd-stats-tab {
-  display: inline-flex;
-  align-items: center;
-  height: 24px;
-  padding: 0 8px;
-  border-radius: 6px;
-  color: var(--ccd-stats-value);
-  font-size: 13px;
-  font-weight: 500;
-  line-height: 24px;
-  white-space: nowrap;
+html[data-dsh-ccd-style="true"] [data-ccd-stats-card] .ccd-stats-spacer {
+  flex: 1 1 auto;
 }
 
-html[data-dsh-ccd-style="true"] [data-ccd-stats-card] .ccd-stats-tab[data-active="true"] {
+html[data-dsh-ccd-style="true"] [data-ccd-stats-card] .ccd-stats-seg {
+  display: flex;
+  flex-shrink: 0;
+  align-items: center;
+  gap: 3px;
+}
+
+html[data-dsh-ccd-style="true"] [data-ccd-stats-card] .ccd-stats-seg-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  height: 20px;
+  padding: 0 6px;
+  border: 0;
+  border-radius: 4px;
+  background: none;
+  color: var(--ccd-stats-label);
+  font-family: inherit;
+  font-size: 13px;
+  font-weight: 500;
+  line-height: 20px;
+  white-space: nowrap;
+  cursor: pointer;
+  user-select: none;
+}
+
+html[data-dsh-ccd-style="true"] [data-ccd-stats-card] .ccd-stats-seg-btn[data-active="true"] {
   background: var(--ccd-stats-tab);
+  color: var(--ccd-stats-value);
+}
+
+html[data-dsh-ccd-style="true"] [data-ccd-stats-card] .ccd-stats-seg-btn:hover:not([data-active="true"]) {
+  color: var(--ccd-stats-value);
 }
 
 html[data-dsh-ccd-style="true"] [data-ccd-stats-card] .ccd-stats-body {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+html[data-dsh-ccd-style="true"] [data-ccd-stats-card] .ccd-stats-overview {
   display: flex;
   flex-direction: column;
   gap: 6px;
@@ -101,6 +131,13 @@ html[data-dsh-ccd-style="true"] [data-ccd-stats-card] .ccd-stats-value {
   line-height: 19px;
   white-space: nowrap;
   text-overflow: ellipsis;
+}
+
+/* `Favorite model` prints one size down, as the reference does. */
+html[data-dsh-ccd-style="true"] [data-ccd-stats-card] .ccd-stats-value-small {
+  font-size: 12px;
+  font-weight: 500;
+  line-height: 17px;
 }
 
 /* Contribution heatmap: 26 columns of 7 square cells, 3px gutters. */
@@ -151,4 +188,217 @@ html[data-dsh-ccd-style="true"] [data-ccd-stats-card] .ccd-stats-note {
   color: var(--ccd-stats-label);
   font-size: 11px;
   line-height: 17px;
+}
+
+/* Models view: the chart group keeps the reference's 5px rhythm. */
+html[data-dsh-ccd-style="true"] [data-ccd-stats-card] .ccd-stats-models {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+
+/*
+ * The chart is a 2×2 grid: the axis column, the plot, and the label row under
+ * the plot. The reference fixes the whole block at 160px, pads it 8/10/5/3 and
+ * puts 12px between the plot and the labels.
+ */
+html[data-dsh-ccd-style="true"] [data-ccd-stats-card] .ccd-stats-chart {
+  box-sizing: border-box;
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  grid-template-rows: minmax(0, 1fr) auto;
+  column-gap: 11px;
+  row-gap: 12px;
+  height: 160px;
+  padding: 8px 10px 5px 3px;
+  color: var(--ccd-stats-label);
+  font-size: 11px;
+  line-height: 1;
+}
+
+html[data-dsh-ccd-style="true"] [data-ccd-stats-card] .ccd-stats-chart-y {
+  display: flex;
+  flex-direction: column-reverse;
+  align-items: flex-end;
+  justify-content: space-between;
+}
+
+/* Zero height so a tick label is centred on its grid line. */
+html[data-dsh-ccd-style="true"] [data-ccd-stats-card] .ccd-stats-tick {
+  display: flex;
+  align-items: center;
+  height: 0;
+  white-space: nowrap;
+}
+
+html[data-dsh-ccd-style="true"] [data-ccd-stats-card] .ccd-stats-chart-plot {
+  display: flex;
+  min-width: 0;
+  min-height: 0;
+}
+
+html[data-dsh-ccd-style="true"] [data-ccd-stats-card] .ccd-stats-chart-day {
+  display: flex;
+  flex: 1 1 0;
+  flex-direction: column-reverse;
+  align-items: center;
+  height: 100%;
+  min-width: 0;
+}
+
+html[data-dsh-ccd-style="true"] [data-ccd-stats-card] .ccd-stats-bar {
+  width: 72%;
+  flex-shrink: 0;
+}
+
+/* The top slice of a bar is the last one in DOM order (the column is reversed). */
+html[data-dsh-ccd-style="true"] [data-ccd-stats-card] .ccd-stats-bar:last-child {
+  border-radius: 2px 2px 0 0;
+}
+
+html[data-dsh-ccd-style="true"] [data-ccd-stats-card] .ccd-stats-chart-day:hover .ccd-stats-bar {
+  filter: brightness(0.9);
+}
+
+html[data-dsh-ccd-style="true"] [data-ccd-stats-card] .ccd-stats-chart-x {
+  grid-column-start: 2;
+  display: flex;
+  min-width: 0;
+}
+
+/* A zero-width copy of one label, measured to decide how many labels fit. */
+html[data-dsh-ccd-style="true"] [data-ccd-stats-card] .ccd-stats-sample {
+  width: 0;
+  flex-shrink: 0;
+  overflow: hidden;
+  visibility: hidden;
+  white-space: nowrap;
+}
+
+html[data-dsh-ccd-style="true"] [data-ccd-stats-card] .ccd-stats-chart-label {
+  display: flex;
+  flex: 1 1 0;
+  justify-content: center;
+  min-width: 0;
+  white-space: nowrap;
+}
+
+html[data-dsh-ccd-style="true"] [data-ccd-stats-card] .ccd-stats-chart-label[hidden] {
+  display: none;
+}
+
+/* Legend: swatch, name, lifetime in/out, share of the range. */
+html[data-dsh-ccd-style="true"] [data-ccd-stats-card] .ccd-stats-legend {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+html[data-dsh-ccd-style="true"] [data-ccd-stats-card] .ccd-stats-legend-row {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 12px;
+  line-height: 15px;
+}
+
+html[data-dsh-ccd-style="true"] [data-ccd-stats-card] .ccd-stats-legend-row[hidden] {
+  display: none;
+}
+
+html[data-dsh-ccd-style="true"] [data-ccd-stats-card] .ccd-stats-swatch {
+  width: 8px;
+  height: 8px;
+  flex-shrink: 0;
+  border-radius: 2px;
+}
+
+html[data-dsh-ccd-style="true"] [data-ccd-stats-card] .ccd-stats-legend-name {
+  flex: 1 1 auto;
+  overflow: hidden;
+  min-width: 0;
+  color: var(--ccd-stats-value);
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+html[data-dsh-ccd-style="true"] [data-ccd-stats-card] .ccd-stats-legend-usage {
+  flex-shrink: 0;
+  color: var(--ccd-stats-label);
+  font-variant-numeric: tabular-nums;
+}
+
+html[data-dsh-ccd-style="true"] [data-ccd-stats-card] .ccd-stats-legend-percent {
+  width: 56px;
+  flex-shrink: 0;
+  color: var(--ccd-stats-value);
+  font-variant-numeric: tabular-nums;
+  text-align: right;
+}
+
+html[data-dsh-ccd-style="true"] [data-ccd-stats-card] .ccd-stats-empty {
+  color: var(--ccd-stats-label);
+  font-size: 12px;
+  line-height: 15px;
+}
+
+html[data-dsh-ccd-style="true"] [data-ccd-stats-card] .ccd-stats-more {
+  align-self: flex-start;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--ccd-stats-label);
+  font-family: inherit;
+  font-size: 12px;
+  line-height: 15px;
+  cursor: pointer;
+}
+
+html[data-dsh-ccd-style="true"] [data-ccd-stats-card] .ccd-stats-more:hover {
+  color: var(--ccd-stats-value);
+}
+
+/*
+ * Tooltip. The reference's own popup is 24px tall for one line (13px text with
+ * 4px/8px padding), sits 4px above its anchor and is centred on it; it may
+ * overflow the card, because its collision boundary is the window.
+ */
+html[data-dsh-ccd-style="true"] [data-ccd-stats-card] .ccd-stats-tooltip {
+  position: absolute;
+  z-index: 2;
+  top: 0;
+  left: 0;
+  display: none;
+  max-width: 320px;
+  padding: 4px 8px;
+  border-radius: 6px;
+  background: var(--ccd-stats-tip-bg);
+  color: var(--ccd-stats-tip-fg);
+  font-size: 13px;
+  font-weight: 600;
+  line-height: 16px;
+  white-space: nowrap;
+  pointer-events: none;
+}
+
+html[data-dsh-ccd-style="true"] [data-ccd-stats-card] .ccd-stats-tooltip[data-open="true"] {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+html[data-dsh-ccd-style="true"] [data-ccd-stats-card] .ccd-stats-tip-row {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 12px;
+  font-weight: 500;
+  font-variant-numeric: tabular-nums;
+}
+
+html[data-dsh-ccd-style="true"] [data-ccd-stats-card] .ccd-stats-tip-dot {
+  width: 6px;
+  height: 6px;
+  flex-shrink: 0;
+  border-radius: 50%;
 }

@@ -2,6 +2,43 @@
 
 更新日期：2026-10-03。本文件保留当前验证结论与证据位置，源码检查、夹具和真实运行分开记录。已被后续修复取代的详细记录保存在 Git 提交 `ec55195` 中，可执行 `git show ec55195:docs/VERIFICATION.md` 查看。
 
+## 统计卡片：悬浮提示、Models 视图与范围切换（2026-10-03）
+
+在已接入的真实数据通路之上补齐参考卡片剩下的三个交互。参考实现从 Claude Desktop bundle 逐段核出（`cc70f2bdf-oAbIMYEh.js`），几何用两张 @2x 截图实测，两者都记在 [统计卡片调研](STATS_RESEARCH.md) 第十二节。
+
+**真实语料**（隔离 home `.cache/verify/home-stats`，59 会话只读副本，`dsh --profile web`，Playwright Chromium 1382×875 @2x，脚本 `/tmp/ccd-probe/probe-v2.mjs`）：
+
+| 场景 | 结果 |
+| --- | --- |
+| 卡片出现 | 712 ms；读数与上一轮逐项一致：会话 55／消息 136／1.1B token／活跃 4 天／峰值 12 AM／`opencode-go/deepseek-v4.1-flash` |
+| 分段控件 | 20px 高、圆角 4、13px/500；`Overview*／Models`、`All*／30d／7d`，激活底色 `rgb(230,230,230)` |
+| 热力图提示 | 悬停 10 月 3 日那格（29 次）→ `Oct 3 — 29`；84.5×24、`rgb(12,12,12)`、圆角 6、锚点上方 3.5px、水平居中偏差 1.5px、溢出卡片（与参考同行为） |
+| Models 视图 | 160px 图表、4 根柱（Sep 30–Oct 3）、柱宽 71.8 = 天列 99.7 的 72%、模型 1/2 配色 `rgb(73,130,223)`／`rgb(103,151,228)`、y 刻度 `0/200M/400M/600M`、x 标签 4/4 可见 |
+| 图表提示 | 悬停 Oct 3 → 加粗日期 + `opencode-go/deepseek-v4.1-flash: 210.2M`，上方 3px、居中偏差 0.6px |
+| 图例 | 2 行、行高 15、8px 色块、`30.8M in · 4.2M out`／`1.1M in · 45.3k out`、`99.2%`／`0.8%` |
+| 范围切换 | 三档互斥激活并重画卡片；本语料活动全在 7 天内，读数不变（范围过滤另用合成快照验证） |
+| 控制台 | 0 pageerror |
+
+**范围过滤与标签抽稀**（合成快照经 `page.route` 喂给真实客户端代码，脚本 `/tmp/ccd-probe/probe-synth.mjs`）：合成库为 139 天里 44 个活跃日、3 个模型、1.327 亿 token，期望值用独立循环算出。
+
+| 范围 | 统计格（会话／消息／token／活跃天） | 图表天数 | x 标签 | 图例百分比 |
+| --- | --- | --- | --- | --- |
+| All | 9／270／132.7M／44 | 44（期望 44）✓ | 9/44（抽稀） | 47.8／32.5／19.6 ✓ |
+| 30d | 9／138／64.5M／22 | 22（期望 22）✓ | 11/22 | 49.5／32.4／18.1 ✓ |
+| 7d | 9／44／20.9M／7 | 7（期望 7）✓ | 7/7 | 54.7／29.8／15.6 ✓ |
+
+热力图在三档范围下逐格不变（参考行为），y 轴刻度随范围重算（`0/2M/4M/6M` → `0/1M…5M`），图表提示按模型分行，控制台 0 pageerror。
+
+**宿主侧的额外发现**：web profile 的 `dsh-session-query-sqlite` 是 `path: ':memory:', openAt: never`，`sessionQuery.listSessions()` 只列出宿主登记过的会话——手工放进 `sessions/<项目目录>/` 的合成日志（命名、v4 头、锁文件都与真实会话一致，Node 侧解压校验通过）不会被列出。因此"用合成语料驱动 host 聚合"这条验证路线不可行；host 的范围口径由 41 项单元测试覆盖（`tests/stats-{unit,aggregate,view}.test.ts`），端到端范围行为由上面的路由拦截验证。
+
+本地检查：`npm run check` 全绿（typecheck／架构与颜色归属／109 项测试／构建／包内容 64 文件）。验证过程中同一工作区还有另一条工作流在写 `showcase/`（`tsconfig.json` 已把 `showcase/**` 纳入 include），它的 WIP 一度让仓库级 `typecheck` 失败；本轮先用 `.cache/tsconfig.scope.json` 限定 `src/`＋`tests/` 验证自己的作用域，对方修好后仓库级检查已恢复全绿，双方文件互不覆盖。证据：`docs/verification/local/stats-card/stats-v2-*.png`（该目录按惯例不进 Git）。
+
+## 输入框像素鲸鱼调研（2026-10-03，尚未实现）
+
+本轮只调研开源实现与接入方案，见 [宠物调研](PET_RESEARCH.md)。解析用户参考 GIF（434×298、67 帧、5.11 秒）并抽帧观察点击后的姿态变化；只读检查本地 DSH `0.2.0-rc.2` 的插槽声明与 Composer 渲染代码，确认 `conversation.input.overlay` 是 session 级 list 插槽，锚点位于输入卡顶边；没有 Session 时宿主不渲染此插槽，因此新建页需要单独适配。宠物未接入、未安装、未进行真实 DSH 运行验收；本轮没有改动运行时代码。
+
+本地文档检查：`npm run check:architecture`（含本地链接）与 `git diff --check` 通过；未运行完整测试或构建。
+
 ## 统计卡片接入真实数据（2026-10-03）
 
 Host 半注册 `ccdUsage` 投影单元折叠会话日志，浏览器半读 `/api/ccd-stats`。语料用用户真实会话库的**只读副本**（59 个会话、26 MB `session.jsonl.zstd`）＋其 `session_projcache` 检查点副本，隔离 home `.cache/verify/home-stats`（`dsh --profile web`，与桌面同一套 bundle），Playwright Chromium 1382×875 @2x，脚本 `/tmp/ccd-probe/probe-final.mjs`、`probe-cold.mjs`。
@@ -537,6 +574,12 @@ Web profile 默认停用 `ui-sidebar-browser`（`dsh-web-app` 补丁里 `disable
 2026-10-02，正式 CLI 已安装 `artifacts/install-balanced-spacing-final/dsh-ccd-style-0.1.0.tgz`。交付时包内、仓库与安装副本客户端逐字节一致，SHA-256 为 `76b86e3e5bff3ded43f7dea2f0b42d17c6c75d98daf906c104adfdefb9d752de`。用户 patch 与备份逐字节相同；备份在 `.cache/verify/desktop-before-balanced-spacing/`。这是交付时记录，本轮没有重新检查运行中渲染进程的加载字节。
 
 当前开发构建可由 `npm run build` 重建。重装须使用新的 tarball 路径，不能覆盖 profile 或备份仍引用的安装包；升级与回退见 [安装指南](../install.md)。
+
+## 预览页（2026-10-03，仅本地）
+
+`showcase/` 的静态预览页在本地用无头 Chromium 按 1374×871、dpr 2 截图核对，覆盖新建会话、聊天页、模型选择、推理等级、账号菜单、插件设置六个场景，以及浅色／深色与「插件／原生」两种对照。核对结论：插件真实样式表与真实组件（`ModelControls`、`EffortPanel`、`ConfigPage`、`createStatsCard`）在仿真宿主上渲染正常；模型菜单、推理等级、统计卡片的页签与日期范围、配置页开关均可交互；正文溢出时 `data-ccd-fade-bottom` 与 `::after` 渐隐按样式表预期出现。
+
+**这不是真实 DSH 运行验证**：宿主外壳是手写的仿真层，`compat/*` 的观察器不参与，预览页只覆盖外观。证据为 `docs/verification/local/showcase/preview-*.png`（仅本地，不随仓库发布）。实现与边界见 [showcase/README.md](../showcase/README.md)。
 
 ## 下一次验收
 

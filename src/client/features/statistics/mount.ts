@@ -20,14 +20,13 @@
  * without the aggregation (or with the statistics feature off) shows the
  * native page untouched rather than an empty box.
  */
-import type { StatsSnapshot } from '../../../shared/stats.ts';
+import type { StatsRangeId, StatsSnapshot } from '../../../shared/stats.ts';
 import type { CleanupScope } from '../../core/cleanup.ts';
 import type { Logger } from '../../contracts/ports.ts';
 import { HOST } from '../../compat/host-dom.ts';
-import type { StatsCardData } from './card.ts';
-import { createStatsCard } from './card.ts';
+import { createStatsCard, type StatsCard } from './card.ts';
 import type { StatsSource } from './source.ts';
-import { buildCardData } from './view.ts';
+import { buildCardData, INITIAL_STATS_VIEW, type StatsViewState } from './view.ts';
 
 /**
  * The hero-phase conversation root. `data-phase` sits on the conversation root
@@ -64,13 +63,13 @@ export function mountStatisticsCard(
 ): void {
   const random = stableRandom();
   let snapshot: StatsSnapshot | null = source.current;
-  let rendered: StatsSnapshot | null = null;
-  let data: StatsCardData | null = null;
-  let card: HTMLElement | null = null;
+  let view: StatsViewState = INITIAL_STATS_VIEW;
+  let rendered: { snapshot: StatsSnapshot; view: StatsViewState } | null = null;
+  let card: StatsCard | null = null;
   let host: HTMLElement | null = null;
 
   const remove = () => {
-    card?.remove();
+    card?.element.remove();
     card = null;
     host = null;
   };
@@ -81,8 +80,8 @@ export function mountStatisticsCard(
   const measure = () => {
     if (card === null) return;
     const greeting = document.querySelector<HTMLElement>(`${HERO} ${HOST.heroRoot}`);
-    if (greeting === null) return;
-    card.style.setProperty(GAP_PROPERTY, `${greeting.offsetHeight + GAP_PX}px`);
+    if (greeting !== null) card.element.style.setProperty(GAP_PROPERTY, `${greeting.offsetHeight + GAP_PX}px`);
+    card.layout();
   };
 
   const sync = () => {
@@ -92,20 +91,38 @@ export function mountStatisticsCard(
       remove();
       return;
     }
-    if (data === null || rendered !== snapshot) {
-      data = buildCardData(snapshot, random);
-      rendered = snapshot;
+    if (rendered === null || rendered.snapshot !== snapshot || rendered.view !== view) {
+      rendered = { snapshot, view };
       remove();
     }
-    if (card !== null && card.isConnected && host === stack) {
+    if (card !== null && card.element.isConnected && host === stack) {
       measure();
       return;
     }
     remove();
-    card = createStatsCard(document, data);
-    stack.append(card);
+    card = createStatsCard(document, buildCardData(snapshot, view, random), {
+      onTab: tab => {
+        /* Re-selecting the current view must not rebuild the card under the
+           pointer that just clicked it. */
+        if (tab === view.tab) return;
+        view = { ...view, tab };
+        sync();
+      },
+      onRange: (range: StatsRangeId) => {
+        if (range === view.range) return;
+        view = { ...view, range };
+        sync();
+      },
+    });
+    stack.append(card.element);
     host = stack;
     measure();
+  };
+
+  /* The card is a fixed 480px wide, so a resize only changes how many x-axis
+     labels the chart can show. */
+  const relayout = () => {
+    card?.layout();
   };
 
   let observer: MutationObserver | undefined;
@@ -122,12 +139,14 @@ export function mountStatisticsCard(
     return;
   }
 
+  window.addEventListener('resize', relayout);
   const unsubscribe = source.subscribe(next => {
     snapshot = next;
     sync();
   });
 
   scope.add(() => {
+    window.removeEventListener('resize', relayout);
     observer?.disconnect();
     unsubscribe();
     remove();

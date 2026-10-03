@@ -111,6 +111,18 @@ html[data-dsh-ccd-style="true"] {
   --ccd-stats-heat-2: hsl(217 70% 64%);
   --ccd-stats-heat-3: hsl(217 70% 56%);
   --ccd-stats-heat-4: hsl(217 70% 48%);
+  /* The `Models` view colours its bars and legend by rank:
+     `hsl(217 70% min(88, 58 + 7n)%)`, which flattens into these six shades. */
+  --ccd-stats-model-1: hsl(217 70% 58%);
+  --ccd-stats-model-2: hsl(217 70% 65%);
+  --ccd-stats-model-3: hsl(217 70% 72%);
+  --ccd-stats-model-4: hsl(217 70% 79%);
+  --ccd-stats-model-5: hsl(217 70% 86%);
+  --ccd-stats-model-6: hsl(217 70% 88%);
+  /* Tooltips are the reference's dark popup in both themes; on a dark panel it
+     steps up to a mid grey so the box keeps its contrast. */
+  --ccd-stats-tip-bg: #0c0c0c;
+  --ccd-stats-tip-fg: #f7f7f5;
 
   /* Assistant Markdown palette matched to the CCD transcript reference. */
   --ccd-link: #2b61b5;
@@ -224,6 +236,16 @@ html[data-dsh-ccd-style="true"] body[data-ds-dark-theme] {
   --ccd-stats-heat-2: hsl(217 64% 70%);
   --ccd-stats-heat-3: hsl(217 66% 62%);
   --ccd-stats-heat-4: hsl(217 70% 54%);
+  /* Model ramp, raised for the dark panel; six distinct steps, as the light
+     theme's clamped ramp produces. */
+  --ccd-stats-model-1: hsl(217 62% 70%);
+  --ccd-stats-model-2: hsl(217 64% 75%);
+  --ccd-stats-model-3: hsl(217 66% 80%);
+  --ccd-stats-model-4: hsl(217 68% 84%);
+  --ccd-stats-model-5: hsl(217 70% 87%);
+  --ccd-stats-model-6: hsl(217 70% 89%);
+  --ccd-stats-tip-bg: #454542;
+  --ccd-stats-tip-fg: #f7f7f5;
 
   /* Assistant Markdown palette, lightened for a dark transcript. */
   --ccd-link: #86b0e8;

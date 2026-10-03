@@ -52,7 +52,8 @@ export interface StatsSource {
  */
 function isUsable(snapshot: StatsSnapshot): boolean {
   if (snapshot.pending === 0) return true;
-  return snapshot.sessions > 0 || snapshot.messages > 0 || snapshot.tokens > 0;
+  const totals = snapshot.ranges.all;
+  return totals.sessions > 0 || totals.messages > 0 || totals.tokens > 0;
 }
 
 /**

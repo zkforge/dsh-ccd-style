@@ -112,7 +112,9 @@ TSX 接收 `locked`、`available`、目录标准 hook 与注册层回调；不�
 
 `stateSchema`／`viewSchema` 在类型上是 zod 的 `ZodType`，运行时只调用 `.parse`。本项目不新增运行时依赖，用两个本地读取函数（宽容、永不抛错）加一处注明的类型转换顶上；`zod` 只作为类型来源（它是 devDependency 的传递依赖，不进包）。
 
-**带 `wire` 的单元会离开 host。** 它的值随会话列表与当前会话快照下发，变更还会进 `session/controls` 变更流（`dsh-api-session-controller` 的 `onChanged` 订阅）。因此 wire 视图只放卡片需要的稀疏数值（每会话约 100–200 B）。客户端生成的投影 schema 是普通 zod object，未声明的键被丢弃而不是报错（`dsh-api-remotes/lib/client.js` 无 `.strict()`，本轮核实）。
+**带 `wire` 的单元会离开 host。** 它的值随会话列表与当前会话快照下发，变更还会进 `session/controls` 变更流（`dsh-api-session-controller` 的 `onChanged` 订阅）。因此 wire 视图只放卡片需要的稀疏数值。`Models` 视图上线后每个会话多了一份"按天 × 模型"的 token 表，编码上让日行只带模型在模型表里的**下标**（`[日期, 下标, token]`）而不是重复 `provider/model` 字符串，真实语料里每个会话仍是几百字节量级。客户端生成的投影 schema 是普通 zod object，未声明的键被丢弃而不是报错（`dsh-api-remotes/lib/client.js` 无 `.strict()`，本轮核实）。
+
+**`sessionQuery.listSessions()` 只列出宿主登记过的会话。** web profile 里 `dsh-session-query-sqlite` 的配置是 `path: ':memory:'`、`openAt: never`。本轮往隔离 home 的 `sessions/<项目目录>/<会话 id>/session.v4.jsonl.zstd` 手工放了 9 个格式完全合法（v4 头、`session.lock`、Node 侧解压校验通过）的合成会话，列表里始终只有原本登记的 59 个。结论：验收 host 聚合要么用宿主自己产生过的会话，要么走单元测试；不要假设"把日志放进 sessions 目录就会被列出"。
 
 **供数路由用鉴权通道，不用裸 webServer。** `ctx.connection.fetch.register({ path: '/api/ccd-stats', methods: ['GET'], requestBody: 'buffered', fetch })`：carrier 先做 Host／Origin 与会话 cookie 校验，再交给 handler；`createSharedFetchHandler` 先查精确路由表再看 Typert 拦截器，同 path 二次注册直接抛错。官方先例：`/api/session.export`（`dsh-session-log-export`）、`/api/session/uploadFileBinary`（`dsh-client-file-upload`）。`ctx.webServer.register` 那条**没有鉴权**，只在没有 connection 的部署里才值得考虑，本插件不采用。
 
